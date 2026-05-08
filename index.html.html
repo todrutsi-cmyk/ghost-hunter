@@ -2,135 +2,1543 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>신비아파트: 고스트 헌터</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>신비아파트: 고스트 헌터 ULTIMATE</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" rel="stylesheet">
 <style>
-    body{margin:0;padding:0;background:#000;overflow:hidden;height:100vh;font-family:'Black Han Sans',sans-serif;}
-    #v{position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1;}
-    #fakebg{position:fixed;inset:0;background:radial-gradient(#1a0033,#000);z-index:1;display:none;}
-    #scanline{position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 4px,rgba(0,255,80,0.1) 4px,rgba(0,255,80,0.1) 5px);z-index:2;}
-    
-    #tw{position:fixed;top:50%;left:50%;transform:translate(-50%,-55%);display:none;flex-direction:column;align-items:center;z-index:10;}
-    #ghost-img{width:260px;height:260px;object-fit:contain;cursor:pointer;box-shadow:0 0 50px #ff0000;border-radius:15px;}
-    
-    #hpbar{width:300px;height:22px;background:#111;border:3px solid #ff0000;border-radius:12px;overflow:hidden;margin:10px 0;}
-    #hpfill{height:100%;background:linear-gradient(#ff0000,#ffaa00);width:100%;}
-    
-    button{padding:12px 28px;margin:8px;font-size:17px;border-radius:30px;}
-    .attack{background:linear-gradient(#ff2222,#bb0000);color:white;border:2px solid #ff5555;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body,html{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Black Han Sans',sans-serif;}
+
+#v{position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1;}
+#fakebg{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at 30% 40%,#0d0020 0%,#000 70%);display:none;}
+#scanline{position:fixed;inset:0;z-index:2;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,255,0,0.01) 3px,rgba(0,255,0,0.01) 4px);}
+
+/* 레이더 */
+#radar{position:fixed;top:0;left:0;right:0;height:3px;z-index:10;}
+#radar-fill{height:100%;width:0%;background:#0f0;box-shadow:0 0 6px #0f0;transition:width 0.1s;}
+
+/* 상단 HUD */
+#hud-top{position:fixed;top:5px;left:0;right:0;padding:0 8px;z-index:10;display:flex;flex-direction:column;gap:4px;}
+#hud-row1{display:flex;justify-content:space-between;align-items:center;}
+#hud-row2{display:flex;justify-content:space-between;align-items:center;}
+.hud-box{background:rgba(0,0,0,0.75);border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:3px 8px;font-size:11px;color:#fff;}
+#det{border-color:#0f0;color:#0f0;}
+#gold-box{border-color:#ffd700;color:#ffd700;}
+#exp-wrap{flex:1;margin:0 6px;}
+#exp-bar-bg{background:rgba(255,255,255,0.1);border-radius:4px;height:6px;position:relative;overflow:hidden;}
+#exp-bar{height:100%;background:linear-gradient(90deg,#00aaff,#00ffaa);border-radius:4px;transition:width 0.3s;}
+#lv-label{font-size:10px;color:#00ffaa;text-align:center;margin-bottom:1px;}
+
+/* 위험 */
+#danger{position:fixed;inset:0;z-index:6;pointer-events:none;opacity:0;border:6px solid red;box-shadow:inset 0 0 80px rgba(255,0,0,0.55);}
+#danger.on{animation:dpulse 0.4s ease-in-out 4;}
+@keyframes dpulse{0%,100%{opacity:0;}50%{opacity:1;}}
+
+/* 메시지 */
+#msg{position:fixed;top:82px;left:0;right:0;text-align:center;z-index:10;pointer-events:none;}
+#msg span{display:inline-block;background:rgba(0,0,0,0.78);color:#fff;padding:6px 16px;border-radius:18px;font-size:13px;border:1px solid rgba(255,255,255,0.12);}
+
+/* 콤보 */
+#combo-display{position:fixed;top:115px;right:10px;z-index:10;text-align:right;pointer-events:none;opacity:0;transition:opacity 0.3s;}
+#combo-display.show{opacity:1;}
+#combo-num{font-size:28px;color:#ff6600;text-shadow:0 0 12px #ff6600;line-height:1;}
+#combo-label{font-size:10px;color:#ffaa44;}
+
+/* 귀신 등장 영역 */
+#battle-area{position:fixed;top:0;left:0;right:0;bottom:0;z-index:8;display:none;align-items:center;justify-content:center;flex-direction:column;}
+#battle-area.active{display:flex;}
+
+/* 시간바 */
+#time-bar-wrap{position:fixed;top:130px;left:10px;right:10px;z-index:11;display:none;}
+#time-bar-bg{background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.2);border-radius:6px;height:10px;overflow:hidden;}
+#time-bar{height:100%;background:linear-gradient(90deg,#ff1a1a,#ff8800);border-radius:6px;transition:width 0.1s linear;width:100%;}
+#time-label{font-size:10px;color:#fff;text-align:center;margin-bottom:2px;}
+
+/* 귀신 HP바 */
+#hp-wrap{position:fixed;top:150px;left:20px;right:20px;z-index:11;display:none;}
+#ghost-name-hp{font-size:14px;color:#fff;text-shadow:0 0 8px #f00;margin-bottom:3px;text-align:center;letter-spacing:1px;}
+#hp-bar-bg{background:rgba(0,0,0,0.6);border:1px solid rgba(255,100,100,0.4);border-radius:6px;height:14px;overflow:hidden;position:relative;}
+#hp-bar{height:100%;background:linear-gradient(90deg,#ff0000,#ff5500);border-radius:6px;transition:width 0.15s;}
+#hp-text{position:absolute;top:0;left:0;right:0;text-align:center;font-size:10px;color:#fff;line-height:14px;}
+
+/* 귀신 이미지 */
+#ghost-wrap{position:relative;display:flex;align-items:center;justify-content:center;margin-top:40px;}
+#ghost-img{
+  width:200px;height:200px;object-fit:contain;
+  cursor:pointer;user-select:none;
+  filter:drop-shadow(0 0 25px #ff0000) drop-shadow(0 0 50px rgba(200,0,0,0.5));
+  animation:gfloat 2s ease-in-out infinite;
+  transition:filter 0.1s;
+}
+#ghost-img.hit{animation:ghost-hit 0.15s ease-out,gfloat 2s ease-in-out infinite 0.15s;filter:drop-shadow(0 0 40px #fff) brightness(2);}
+@keyframes ghost-hit{0%{transform:scale(1.15) rotate(3deg);}100%{transform:scale(1) rotate(0deg);}}
+@keyframes gfloat{0%,100%{transform:translateY(0) rotate(-1.5deg);}50%{transform:translateY(-15px) rotate(1.5deg);}}
+#ghost-img.boss{width:240px;height:240px;filter:drop-shadow(0 0 30px #ff0000) drop-shadow(0 0 60px rgba(255,0,0,0.6)) drop-shadow(0 0 2px #ff6600);}
+
+/* 대미지 숫자 */
+.dmg-num{
+  position:fixed;pointer-events:none;z-index:200;
+  font-size:22px;font-weight:bold;color:#fff;
+  text-shadow:0 0 8px #f00,2px 2px 0 #000;
+  animation:dmg-fly 0.7s ease-out forwards;
+}
+@keyframes dmg-fly{0%{opacity:1;transform:translateY(0) scale(1);}100%{opacity:0;transform:translateY(-60px) scale(0.6);}}
+
+/* 실패/성공 오버레이 */
+#result-overlay{position:fixed;inset:0;z-index:150;display:none;align-items:center;justify-content:center;flex-direction:column;}
+#result-overlay.fail{background:rgba(80,0,0,0.92);}
+#result-overlay.success{background:rgba(0,0,0,0.85);}
+#result-title{font-size:38px;letter-spacing:3px;margin-bottom:16px;}
+#result-detail{color:rgba(255,255,255,0.7);font-size:13px;text-align:center;line-height:2;margin-bottom:24px;}
+#result-btn{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:12px 36px;border-radius:24px;font-size:16px;font-family:'Black Han Sans',sans-serif;cursor:pointer;}
+
+/* 레벨업 */
+#levelup-overlay{position:fixed;inset:0;z-index:160;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,0,30,0.92);pointer-events:none;}
+#levelup-overlay.show{display:flex;animation:lu-in 0.5s ease-out;}
+@keyframes lu-in{from{opacity:0;transform:scale(0.5);}to{opacity:1;transform:scale(1);}}
+#lu-lv{font-size:52px;color:#ffd700;text-shadow:0 0 20px #ffd700;animation:lu-glow 1s ease-in-out infinite;}
+@keyframes lu-glow{0%,100%{text-shadow:0 0 20px #ffd700;}50%{text-shadow:0 0 40px #ffd700,0 0 60px #ff8800;}}
+#lu-title{font-size:18px;color:#fff;margin-top:8px;letter-spacing:2px;}
+#lu-sub{font-size:13px;color:rgba(255,255,255,0.6);margin-top:4px;}
+
+/* 셔터 */
+#shutter{position:fixed;inset:0;z-index:140;background:#fff;opacity:0;pointer-events:none;}
+#shutter.flash{animation:sf 0.45s ease-out forwards;}
+@keyframes sf{0%{opacity:0.9;}100%{opacity:0;}}
+
+/* ── 메뉴 화면들 ── */
+.screen{position:fixed;inset:0;z-index:100;display:none;overflow-y:auto;padding:16px;background:linear-gradient(155deg,#060010 0%,#120025 100%);}
+.screen.show{display:block;}
+.screen h1{color:#ffd700;font-size:19px;text-align:center;margin-bottom:4px;text-shadow:0 0 12px #ffd700;letter-spacing:3px;}
+.screen .sub{text-align:center;color:rgba(255,255,255,0.3);font-size:10px;margin-bottom:14px;}
+.close-btn{display:block;margin:16px auto 6px;padding:12px 46px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);color:#fff;border-radius:26px;font-size:14px;font-family:'Black Han Sans',sans-serif;cursor:pointer;}
+
+/* 도감 */
+.tabs{display:flex;gap:7px;margin-bottom:12px;}
+.tab{flex:1;padding:8px;text-align:center;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:rgba(255,255,255,0.4);font-family:'Black Han Sans',sans-serif;font-size:12px;cursor:pointer;}
+.tab.on{background:linear-gradient(135deg,#bb0000,#550000);border-color:#ff2222;color:#fff;box-shadow:0 0 12px rgba(255,0,0,0.3);}
+.prog{background:rgba(255,255,255,0.07);border-radius:8px;height:6px;margin-bottom:12px;overflow:hidden;}
+.pfill{height:100%;background:linear-gradient(90deg,#ff1a1a,#ff6600);border-radius:8px;transition:width 0.5s;}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+.slot{aspect-ratio:0.82;border:1px solid rgba(255,255,255,0.07);border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5px 2px;position:relative;overflow:hidden;}
+.slot.got{background:rgba(255,30,0,0.06);}
+.slot .sname{font-size:8px;color:#fff;text-align:center;line-height:1.3;margin-top:3px;}
+.slot.nope .sname{color:rgba(255,255,255,0.18);}
+.slot .pframe{width:52px;height:58px;background:#0a0a0a;padding:3px 3px 12px 3px;border:1px solid #222;}
+.slot .pframe img{width:100%;height:100%;object-fit:contain;}
+.slot .lock{font-size:20px;opacity:0.25;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
+.slot .rlab{font-size:7px;margin-top:2px;}
+
+/* 상점 */
+.shop-grid{display:flex;flex-direction:column;gap:10px;}
+.shop-item{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;}
+.shop-item.owned{border-color:rgba(0,255,100,0.3);background:rgba(0,255,100,0.04);}
+.shop-item.equipped{border-color:#ffd700;background:rgba(255,215,0,0.06);}
+.shop-icon{font-size:32px;min-width:44px;text-align:center;}
+.shop-info{flex:1;}
+.shop-name{font-size:14px;color:#fff;letter-spacing:1px;}
+.shop-desc{font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px;}
+.shop-atk{font-size:11px;color:#ff8800;margin-top:2px;}
+.shop-btn{padding:8px 14px;border-radius:20px;font-size:12px;font-family:'Black Han Sans',sans-serif;cursor:pointer;border:1px solid;white-space:nowrap;}
+.shop-btn.buy{background:rgba(255,215,0,0.15);border-color:#ffd700;color:#ffd700;}
+.shop-btn.equip{background:rgba(0,255,100,0.15);border-color:#00ff64;color:#00ff64;}
+.shop-btn.equipped-lbl{background:rgba(255,215,0,0.08);border-color:#ffd700;color:#ffd700;cursor:default;}
+.shop-btn.disabled{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.3);cursor:not-allowed;}
+
+/* 강화 */
+.upgrade-wrap{display:flex;flex-direction:column;gap:12px;}
+.upgrade-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px;}
+.upgrade-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.upgrade-icon{font-size:28px;}
+.upgrade-name{font-size:14px;color:#fff;}
+.upgrade-lv{font-size:11px;color:#ffaa00;margin-top:1px;}
+.upgrade-atk{font-size:11px;color:#ff8800;margin-top:1px;}
+.mat-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.mat-item{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:4px 8px;font-size:10px;color:#fff;display:flex;align-items:center;gap:4px;}
+.mat-item.ok{border-color:rgba(0,255,100,0.4);color:#00ff64;}
+.mat-item.ng{border-color:rgba(255,0,0,0.3);color:#ff6666;}
+.upg-btn{width:100%;padding:9px;background:linear-gradient(135deg,#ff8800,#ff4400);border:none;border-radius:8px;color:#fff;font-size:13px;font-family:'Black Han Sans',sans-serif;cursor:pointer;}
+.upg-btn:disabled{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.3);cursor:not-allowed;}
+
+/* 업적 */
+.achiev-list{display:flex;flex-direction:column;gap:8px;}
+.achiev-item{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px;}
+.achiev-item.done{border-color:rgba(255,215,0,0.4);background:rgba(255,215,0,0.05);}
+.achiev-icon{font-size:24px;min-width:30px;}
+.achiev-info{flex:1;}
+.achiev-name{font-size:13px;color:#fff;}
+.achiev-desc{font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px;}
+.achiev-prog{font-size:10px;color:#ffaa44;margin-top:3px;}
+.achiev-reward{font-size:10px;color:#ffd700;}
+
+/* 인벤토리 */
+.inv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+.inv-slot{aspect-ratio:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px;}
+.inv-slot .inv-icon{font-size:24px;}
+.inv-slot .inv-name{font-size:7px;color:rgba(255,255,255,0.6);text-align:center;margin-top:2px;line-height:1.2;}
+.inv-slot .inv-cnt{font-size:11px;color:#ffd700;font-weight:bold;}
+
+/* 랭킹 */
+.rank-list{display:flex;flex-direction:column;gap:8px;}
+.rank-item{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:9px;padding:10px 14px;display:flex;align-items:center;gap:10px;}
+.rank-num{font-size:18px;min-width:28px;color:rgba(255,255,255,0.4);}
+.rank-num.gold{color:#ffd700;}
+.rank-num.silver{color:#aaa;}
+.rank-num.bronze{color:#cd7f32;}
+.rank-info{flex:1;}
+.rank-name{font-size:13px;color:#fff;}
+.rank-score{font-size:11px;color:#ff8800;margin-top:1px;}
+
+/* 하단 버튼 */
+#btns{position:fixed;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:10px;z-index:9;}
+.ubtn{background:rgba(0,0,0,0.78);border:1px solid rgba(255,255,255,0.22);color:#fff;padding:10px 14px;border-radius:22px;font-size:12px;font-family:'Black Han Sans',sans-serif;cursor:pointer;backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;gap:1px;}
+.ubtn .ubtn-icon{font-size:16px;}
+.ubtn .ubtn-lbl{font-size:9px;color:rgba(255,255,255,0.5);}
+
+/* 팝업 토스트 */
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:200;pointer-events:none;opacity:0;transition:opacity 0.3s;}
+#toast.show{opacity:1;}
+#toast-inner{background:rgba(0,0,0,0.88);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 18px;border-radius:18px;font-size:13px;white-space:nowrap;}
+
+/* 업적 팝업 */
+#achiev-popup{position:fixed;top:100px;left:50%;transform:translateX(-50%);z-index:180;display:none;background:rgba(0,0,0,0.92);border:1px solid #ffd700;border-radius:12px;padding:14px 20px;text-align:center;min-width:220px;}
+#achiev-popup.show{display:block;animation:ap-in 0.4s ease-out;}
+@keyframes ap-in{from{opacity:0;transform:translateX(-50%) translateY(-20px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+#ap-icon{font-size:30px;margin-bottom:6px;}
+#ap-title{font-size:11px;color:#ffd700;letter-spacing:1px;}
+#ap-name{font-size:15px;color:#fff;margin-top:2px;}
+#ap-reward{font-size:11px;color:#ffaa44;margin-top:4px;}
+
+/* 특별 이벤트 배너 */
+#event-banner{position:fixed;top:85px;left:0;right:0;z-index:11;text-align:center;pointer-events:none;display:none;}
+#event-banner span{display:inline-block;background:rgba(100,0,150,0.9);border:1px solid #aa00ff;color:#fff;padding:4px 16px;border-radius:14px;font-size:11px;animation:eb-pulse 2s ease-in-out infinite;}
+@keyframes eb-pulse{0%,100%{box-shadow:0 0 8px #aa00ff;}50%{box-shadow:0 0 20px #aa00ff;}}
 </style>
 </head>
 <body>
 
-<video id="v" autoplay playsinline muted loop></video>
 <div id="fakebg"></div>
+<video id="v" autoplay playsinline muted></video>
 <div id="scanline"></div>
+<div id="radar"><div id="radar-fill"></div></div>
 
-<div id="hud" style="position:fixed;top:10px;left:10px;right:10px;color:#0f0;z-index:5;display:flex;justify-content:space-between;">
-    <div id="det">👁 후면 카메라 연결중...</div>
-    <div>💰 <span id="moneytxt">800</span></div>
+<!-- HUD -->
+<div id="hud-top">
+  <div id="hud-row1">
+    <div class="hud-box" id="det">👁 탐지중...</div>
+    <div class="hud-box" id="title-box">🔰 초보 헌터</div>
+    <div class="hud-box" id="gold-box">💰 0G</div>
+  </div>
+  <div id="hud-row2">
+    <div style="font-size:9px;color:#00ffaa;white-space:nowrap;">Lv.<span id="lv-num">1</span></div>
+    <div id="exp-wrap">
+      <div id="lv-label">EXP <span id="exp-num">0</span>/<span id="exp-max">100</span></div>
+      <div id="exp-bar-bg"><div id="exp-bar" style="width:0%"></div></div>
+    </div>
+    <div style="font-size:9px;color:#ff8800;white-space:nowrap;">⚔️ <span id="atk-display">10</span></div>
+  </div>
 </div>
 
-<div id="tw">
-    <img id="ghost-img" src="">
-    <div id="gtag" style="color:#ff0;font-size:23px;margin:12px 0;"></div>
-    <div id="hpbar"><div id="hpfill"></div></div>
-    <button class="attack" onclick="attack()">🔥 공격!</button>
+<div id="danger"></div>
+<div id="msg"><span id="msgtxt">📡 주변을 탐색하세요!</span></div>
+<div id="combo-display"><div id="combo-num">0</div><div id="combo-label">COMBO!</div></div>
+<div id="event-banner"><span id="event-txt">🌙 자정의 귀신이 출현했다!</span></div>
+
+<!-- 시간바 + HP바 -->
+<div id="time-bar-wrap">
+  <div id="time-label">⏱ 남은 시간</div>
+  <div id="time-bar-bg"><div id="time-bar"></div></div>
+</div>
+<div id="hp-wrap">
+  <div id="ghost-name-hp">???</div>
+  <div id="hp-bar-bg">
+    <div id="hp-bar" style="width:100%"></div>
+    <div id="hp-text">100 / 100</div>
+  </div>
 </div>
 
+<!-- 전투 -->
+<div id="battle-area">
+  <div id="ghost-wrap">
+    <img id="ghost-img" src="" alt="">
+  </div>
+</div>
+
+<div id="shutter"></div>
+
+<!-- 결과 -->
+<div id="result-overlay">
+  <div id="result-title"></div>
+  <div id="result-detail"></div>
+  <button id="result-btn" onclick="closeResult()">확인</button>
+</div>
+
+<!-- 레벨업 -->
+<div id="levelup-overlay">
+  <div style="font-size:14px;color:#aaa;letter-spacing:2px;margin-bottom:8px;">LEVEL UP!</div>
+  <div id="lu-lv">Lv.2</div>
+  <div id="lu-title"></div>
+  <div id="lu-sub"></div>
+</div>
+
+<!-- 업적 팝업 -->
+<div id="achiev-popup">
+  <div id="ap-icon">🏆</div>
+  <div id="ap-title">업적 달성!</div>
+  <div id="ap-name"></div>
+  <div id="ap-reward"></div>
+</div>
+
+<!-- 토스트 -->
+<div id="toast"><div id="toast-inner"></div></div>
+
+<!-- 도감 -->
+<div id="book-screen" class="screen">
+  <h1>👻 고스트 도감</h1>
+  <div class="sub">수집한 귀신과 아이템</div>
+  <div class="tabs">
+    <div id="tg" class="tab on" onclick="switchTab('g')">귀신(30)</div>
+    <div id="ti" class="tab" onclick="switchTab('i')">아이템(20)</div>
+  </div>
+  <div class="prog"><div class="pfill" id="pf" style="width:0%"></div></div>
+  <div class="grid" id="grid"></div>
+  <button class="close-btn" onclick="closeScreen('book-screen')">닫기</button>
+</div>
+
+<!-- 상점 -->
+<div id="shop-screen" class="screen">
+  <h1>⚔️ 무기 상점</h1>
+  <div class="sub">골드로 강력한 무기를 구입하세요</div>
+  <div class="shop-grid" id="shop-list"></div>
+  <button class="close-btn" onclick="closeScreen('shop-screen')">닫기</button>
+</div>
+
+<!-- 강화 -->
+<div id="upgrade-screen" class="screen">
+  <h1>🔨 무기 강화</h1>
+  <div class="sub">강화 아이템으로 무기를 강화하세요 (파괴 없음)</div>
+  <div class="upgrade-wrap" id="upgrade-list"></div>
+  <button class="close-btn" onclick="closeScreen('upgrade-screen')">닫기</button>
+</div>
+
+<!-- 인벤토리 -->
+<div id="inv-screen" class="screen">
+  <h1>🎒 인벤토리</h1>
+  <div class="sub">보유 강화 재료 아이템</div>
+  <div class="inv-grid" id="inv-grid"></div>
+  <button class="close-btn" onclick="closeScreen('inv-screen')">닫기</button>
+</div>
+
+<!-- 업적 -->
+<div id="achiev-screen" class="screen">
+  <h1>🏆 도전 과제</h1>
+  <div class="sub">목표를 달성하고 보상을 받으세요</div>
+  <div class="achiev-list" id="achiev-list"></div>
+  <button class="close-btn" onclick="closeScreen('achiev-screen')">닫기</button>
+</div>
+
+<!-- 랭킹 -->
+<div id="rank-screen" class="screen">
+  <h1>📊 점수 랭킹</h1>
+  <div class="sub">최고 점수 기록</div>
+  <div class="rank-list" id="rank-list"></div>
+  <button class="close-btn" onclick="closeScreen('rank-screen')">닫기</button>
+</div>
+
+<!-- 하단 버튼 -->
+<div id="btns">
+  <button class="ubtn" onclick="openScreen('book-screen');renderGrid()">
+    <span class="ubtn-icon">📖</span><span class="ubtn-lbl">도감</span>
+  </button>
+  <button class="ubtn" onclick="openScreen('shop-screen');renderShop()">
+    <span class="ubtn-icon">⚔️</span><span class="ubtn-lbl">상점</span>
+  </button>
+  <button class="ubtn" onclick="openScreen('upgrade-screen');renderUpgrade()">
+    <span class="ubtn-icon">🔨</span><span class="ubtn-lbl">강화</span>
+  </button>
+  <button class="ubtn" onclick="openScreen('inv-screen');renderInv()">
+    <span class="ubtn-icon">🎒</span><span class="ubtn-lbl">인벤</span>
+  </button>
+  <button class="ubtn" onclick="openScreen('achiev-screen');renderAchiev()">
+    <span class="ubtn-icon">🏆</span><span class="ubtn-lbl">업적</span>
+  </button>
+  <button class="ubtn" onclick="manualScan()">
+    <span class="ubtn-icon">🔦</span><span class="ubtn-lbl">탐색</span>
+  </button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 <script>
-// ==================== 플레이어 데이터 ====================
-let player = { money: 800, weaponDmg: 12 };
-let currentGhost = null;
-let currentHP = 0;
-let maxHP = 0;
+// ════════════════════════════════════════
+//  데이터 정의
+// ════════════════════════════════════════
+const RC={common:'#aaa',rare:'#4488ff',epic:'#cc44ff',legendary:'#ffaa00',boss:'#ff0000'};
+const RL={common:'일반',rare:'레어',epic:'에픽',legendary:'전설',boss:'👹보스'};
 
-// ==================== 후면 카메라 강제 ====================
-async function startCamera() {
-    try {
-        // 후면 강제
-        let stream = await navigator.mediaDevices.getUserMedia({
-            video: { 
-                facingMode: { exact: "environment" },
-                width: {ideal: 1280},
-                height: {ideal: 720}
-            }
-        });
-        document.getElementById('v').srcObject = stream;
-        document.getElementById('det').textContent = "👁 후면 카메라 ON";
-    } catch(e) {
-        try {
-            // 실패하면 일반 후면 시도
-            let stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}});
-            document.getElementById('v').srcObject = stream;
-        } catch(err) {
-            document.getElementById('v').style.display = 'none';
-            document.getElementById('fakebg').style.display = 'block';
-            document.getElementById('det').textContent = "📱 카메라 OFF";
-        }
-    }
-}
-
-// ==================== 귀신 데이터 ====================
-const ghosts = [
-    {name:"어둑시니", hp:28, img:"https://i.imgur.com/0zK8vLq.jpeg"},
-    {name:"불가살이", hp:45, img:"https://i.imgur.com/2vX9pLm.jpeg"},
-    {name:"망부화", hp:33, img:"https://i.imgur.com/XkL9mNp.jpeg"},
-    {name:"진명", hp:68, img:"https://i.imgur.com/KfR8vX2.jpeg"},
-    {name:"마고할망", hp:40, img:"https://i.imgur.com/JdR7vPq.jpeg"}
+// 레벨 시스템
+const LEVELS=[
+  {lv:1,title:'초보 헌터',exp:100},
+  {lv:2,title:'귀신 탐정',exp:250},
+  {lv:3,title:'퇴마 견습',exp:500},
+  {lv:4,title:'귀신 박사',exp:900},
+  {lv:5,title:'신비 탐험가',exp:1500},
+  {lv:6,title:'영혼 포획자',exp:2400},
+  {lv:7,title:'퇴마사',exp:3800},
+  {lv:8,title:'신비 마스터',exp:6000},
+  {lv:9,title:'귀신왕 사냥꾼',exp:9500},
+  {lv:10,title:'전설의 헌터',exp:99999},
 ];
 
-// 자동 출현
-function autoSpawn() {
-    if(currentGhost || Math.random() > 0.35) return;
-    
-    currentGhost = ghosts[Math.floor(Math.random()*ghosts.length)];
-    maxHP = currentHP = currentGhost.hp;
-    
-    document.getElementById('ghost-img').src = currentGhost.img;
-    document.getElementById('gtag').textContent = currentGhost.name + " 출현!";
-    document.getElementById('tw').style.display = 'flex';
-    updateHP();
+// 귀신 30종
+const ghosts=[
+  // common
+  {id:'g1',name:'벽수귀',rarity:'common',hp:40,exp:8,gold:5,shape:'wall'},
+  {id:'g2',name:'달걀귀신',rarity:'common',hp:35,exp:7,gold:4,shape:'oval'},
+  {id:'g3',name:'무면귀',rarity:'common',hp:30,exp:6,gold:4,shape:'blank'},
+  {id:'g4',name:'치돈귀',rarity:'common',hp:45,exp:8,gold:5,shape:'round'},
+  {id:'g5',name:'처녀귀신',rarity:'common',hp:40,exp:8,gold:5,shape:'weep'},
+  {id:'g6',name:'손각시',rarity:'common',hp:38,exp:7,gold:5,shape:'hand'},
+  {id:'g7',name:'수시렁이',rarity:'common',hp:50,exp:9,gold:6,shape:'bug'},
+  {id:'g8',name:'역병귀',rarity:'common',hp:55,exp:10,gold:6,shape:'plague'},
+  // rare
+  {id:'g9',name:'어둑시니',rarity:'rare',hp:80,exp:20,gold:15,shape:'spiky'},
+  {id:'g10',name:'망부화',rarity:'rare',hp:90,exp:22,gold:16,shape:'weep2'},
+  {id:'g11',name:'골묘귀',rarity:'rare',hp:85,exp:20,gold:15,shape:'cat'},
+  {id:'g12',name:'흑진귀',rarity:'rare',hp:100,exp:25,gold:18,shape:'dark'},
+  {id:'g13',name:'환마귀',rarity:'rare',hp:95,exp:23,gold:17,shape:'wisp'},
+  {id:'g14',name:'도깨비',rarity:'rare',hp:110,exp:26,gold:19,shape:'dokkaebi'},
+  {id:'g15',name:'강림도령',rarity:'rare',hp:105,exp:25,gold:18,shape:'tall'},
+  {id:'g16',name:'물귀신',rarity:'rare',hp:88,exp:21,gold:16,shape:'water'},
+  // epic
+  {id:'g17',name:'불가살이',rarity:'epic',hp:180,exp:55,gold:40,shape:'flame'},
+  {id:'g18',name:'마고할망',rarity:'epic',hp:200,exp:60,gold:44,shape:'old'},
+  {id:'g19',name:'헤론',rarity:'epic',hp:190,exp:57,gold:42,shape:'heron'},
+  {id:'g20',name:'팬텀토르소',rarity:'epic',hp:175,exp:53,gold:39,shape:'half'},
+  {id:'g21',name:'구미호',rarity:'epic',hp:210,exp:63,gold:46,shape:'fox'},
+  {id:'g22',name:'이무기',rarity:'epic',hp:220,exp:66,gold:48,shape:'snake'},
+  {id:'g23',name:'야차',rarity:'epic',hp:195,exp:58,gold:43,shape:'yaksha'},
+  {id:'g24',name:'두억시니',rarity:'epic',hp:205,exp:62,gold:45,shape:'douk'},
+  // legendary
+  {id:'g25',name:'진명',rarity:'legendary',hp:350,exp:120,gold:90,shape:'crown'},
+  {id:'g26',name:'라바나브',rarity:'legendary',hp:400,exp:140,gold:105,shape:'multi'},
+  {id:'g27',name:'저승사자',rarity:'legendary',hp:380,exp:130,gold:98,shape:'reaper'},
+  {id:'g28',name:'삼승할망',rarity:'legendary',hp:360,exp:125,gold:94,shape:'samsung'},
+  // boss
+  {id:'g29',name:'대왕귀신',rarity:'boss',hp:800,exp:300,gold:250,shape:'boss1',time:60},
+  {id:'g30',name:'명부대왕',rarity:'boss',hp:1200,exp:500,gold:400,shape:'boss2',time:90},
+];
+
+// 아이템 20종 (강화 재료 포함)
+const items=[
+  // 일반 아이템
+  {id:'i1',name:'강림 인형',icon:'🪆',rare:'common',isUpgMat:false},
+  {id:'i2',name:'달콤 초콜릿',icon:'🍫',rare:'common',isUpgMat:false},
+  {id:'i3',name:'퇴마 부적',icon:'📜',rare:'common',isUpgMat:false},
+  {id:'i4',name:'할머니 엿',icon:'🍬',rare:'common',isUpgMat:false},
+  {id:'i5',name:'정화의 소금',icon:'🧂',rare:'common',isUpgMat:false},
+  {id:'i6',name:'악령퇴치 팥',icon:'🫘',rare:'rare',isUpgMat:false},
+  {id:'i7',name:'영혼 카메라',icon:'📷',rare:'rare',isUpgMat:false},
+  {id:'i8',name:'신비 랜턴',icon:'🏮',rare:'rare',isUpgMat:false},
+  {id:'i9',name:'고스트 지도',icon:'🗺',rare:'rare',isUpgMat:false},
+  {id:'i10',name:'마법 고스트볼',icon:'🔮',rare:'epic',isUpgMat:false},
+  // 강화 재료
+  {id:'i11',name:'강화석 (하)',icon:'🪨',rare:'common',isUpgMat:true,matGrade:1},
+  {id:'i12',name:'강화석 (중)',icon:'💎',rare:'rare',isUpgMat:true,matGrade:2},
+  {id:'i13',name:'강화석 (상)',icon:'💠',rare:'epic',isUpgMat:true,matGrade:3},
+  {id:'i14',name:'전설 원석',icon:'🌟',rare:'legendary',isUpgMat:true,matGrade:4},
+  {id:'i15',name:'귀신 결정체',icon:'🔷',rare:'rare',isUpgMat:true,matGrade:2},
+  {id:'i16',name:'영혼 파편',icon:'✨',rare:'common',isUpgMat:true,matGrade:1},
+  {id:'i17',name:'진명의 뼈',icon:'🦴',rare:'epic',isUpgMat:true,matGrade:3},
+  {id:'i18',name:'보스의 심장',icon:'❤️‍🔥',rare:'legendary',isUpgMat:true,matGrade:4},
+  {id:'i19',name:'달빛 결정',icon:'🌙',rare:'rare',isUpgMat:true,matGrade:2},
+  {id:'i20',name:'저승의 꽃',icon:'🌸',rare:'legendary',isUpgMat:true,matGrade:4},
+];
+
+// 무기
+const WEAPONS=[
+  {id:'w1',name:'맨손',icon:'👊',atk:10,price:0,upgReq:null,desc:'기본 공격'},
+  {id:'w2',name:'나무 몽둥이',icon:'🪵',atk:25,price:200,upgReq:[{id:'i11',cnt:3}],desc:'기본 무기'},
+  {id:'w3',name:'쇠 파이프',icon:'🔧',atk:50,price:800,upgReq:[{id:'i11',cnt:5},{id:'i12',cnt:2}],desc:'튼튼한 무기'},
+  {id:'w4',name:'퇴마 단검',icon:'🗡️',atk:90,price:2500,upgReq:[{id:'i12',cnt:5},{id:'i15',cnt:3}],desc:'퇴마사의 단검'},
+  {id:'w5',name:'신비 활',icon:'🏹',atk:150,price:7000,upgReq:[{id:'i12',cnt:8},{id:'i13',cnt:3}],desc:'멀리서 공격'},
+  {id:'w6',name:'귀신 검',icon:'⚔️',atk:250,price:18000,upgReq:[{id:'i13',cnt:5},{id:'i17',cnt:2}],desc:'귀신을 베는 검'},
+  {id:'w7',name:'도깨비 방망이',icon:'🏏',atk:400,price:45000,upgReq:[{id:'i13',cnt:8},{id:'i14',cnt:2}],desc:'전설의 방망이'},
+  {id:'w8',name:'저승 대검',icon:'🔱',atk:700,price:120000,upgReq:[{id:'i14',cnt:5},{id:'i18',cnt:2},{id:'i20',cnt:1}],desc:'명계의 힘이 깃든 대검'},
+];
+
+// 업적
+const ACHIEVS=[
+  {id:'a1',icon:'👶',name:'첫 포획',desc:'귀신을 처음 잡아라',goal:1,type:'catch',reward:{gold:100},done:false},
+  {id:'a2',icon:'🔥',name:'연속 5콤보',desc:'콤보 5회 달성',goal:5,type:'combo',reward:{gold:300},done:false},
+  {id:'a3',icon:'📖',name:'수집가',desc:'귀신 10종 수집',goal:10,type:'collect',reward:{gold:500},done:false},
+  {id:'a4',icon:'💀',name:'전설 포획',desc:'전설 귀신을 잡아라',goal:1,type:'legendary',reward:{gold:1000},done:false},
+  {id:'a5',icon:'👹',name:'보스 사냥꾼',desc:'보스 귀신을 잡아라',goal:1,type:'boss',reward:{gold:2000,item:'i13'},done:false},
+  {id:'a6',icon:'⚔️',name:'무기 구매',desc:'무기를 처음 구매해라',goal:1,type:'buy',reward:{gold:200},done:false},
+  {id:'a7',icon:'🔨',name:'강화의 길',desc:'무기를 처음 강화해라',goal:1,type:'upgrade',reward:{gold:400},done:false},
+  {id:'a8',icon:'💰',name:'부자',desc:'골드 10000 모으기',goal:10000,type:'goldTotal',reward:{item:'i14'},done:false},
+  {id:'a9',icon:'👑',name:'레벨 5',desc:'레벨 5 달성',goal:5,type:'level',reward:{gold:2000},done:false},
+  {id:'a10',icon:'🌟',name:'특별한 만남',desc:'특별 이벤트 귀신을 잡아라',goal:1,type:'special',reward:{gold:1500,item:'i19'},done:false},
+  {id:'a11',icon:'🍀',name:'럭키 헌터',desc:'에픽 귀신 5마리 잡기',goal:5,type:'epic',reward:{gold:1500,item:'i15'},done:false},
+  {id:'a12',icon:'💯',name:'100마리',desc:'귀신 100마리 잡기',goal:100,type:'catchTotal',reward:{gold:5000,item:'i14'},done:false},
+  {id:'a13',icon:'📚',name:'도감 완성',desc:'모든 귀신 수집',goal:30,type:'collect',reward:{gold:10000,item:'i20'},done:false},
+  {id:'a14',icon:'🏆',name:'10레벨',desc:'최고 레벨 달성',goal:10,type:'level',reward:{gold:9999,item:'i18'},done:false},
+];
+
+// ════════════════════════════════════════
+//  세이브 데이터
+// ════════════════════════════════════════
+function defaultSave(){
+  return {
+    gold:0, exp:0, lv:1,
+    collected:[], // 귀신 도감
+    collectedItems:[], // 아이템 도감
+    inventory:{}, // {itemId: count}
+    weapons:{w1:{lv:1}}, // 보유 무기
+    equippedWeapon:'w1',
+    scores:[], // 점수 기록
+    achievs:{}, // {id: progress}
+    achievDone:[], // 완료된 업적 id
+    totalCatch:0, totalGoldEarned:0,
+    maxCombo:0,
+  };
+}
+let save=loadSave();
+function loadSave(){
+  try{const d=localStorage.getItem('shinbi_ultimate');return d?JSON.parse(d):defaultSave();}catch(e){return defaultSave();}
+}
+function saveSave(){localStorage.setItem('shinbi_ultimate',JSON.stringify(save));}
+
+// ════════════════════════════════════════
+//  전투 상태
+// ════════════════════════════════════════
+let appeared=false, currentGhost=null, currentHp=0, maxHp=0;
+let timeLeft=0, timeTimer=null, combo=0, comboTimer=null, sessionScore=0;
+let radarV=0, radarDir=1;
+let isSpecialMidnight=false, isSpecialWeather=false, isSpecialRandom=false;
+
+// ════════════════════════════════════════
+//  귀신 SVG 생성
+// ════════════════════════════════════════
+function makeGhostSVG(g){
+  const shapes={
+    // common
+    wall:`<ellipse cx="100" cy="100" rx="50" ry="45" fill="#2a2010"/>
+      <ellipse cx="82" cy="88" rx="13" ry="12" fill="#00cc00"/>
+      <ellipse cx="118" cy="88" rx="13" ry="12" fill="#00cc00"/>
+      <ellipse cx="82" cy="89" rx="5" ry="6" fill="#000"/>
+      <ellipse cx="118" cy="89" rx="5" ry="6" fill="#000"/>
+      <path d="M76 110 Q100 124 124 110" fill="#100a00"/>
+      <polygon points="82,110 79,121 86,110" fill="#bbaa88"/>
+      <polygon points="97,113 94,124 101,113" fill="#bbaa88"/>
+      <polygon points="114,110 111,121 118,110" fill="#bbaa88"/>
+      <path d="M0 95 Q25 100 50 108" stroke="#1a1208" stroke-width="14" fill="none" stroke-linecap="round"/>
+      <path d="M200 95 Q175 100 150 108" stroke="#1a1208" stroke-width="14" fill="none" stroke-linecap="round"/>`,
+    oval:`<ellipse cx="100" cy="100" rx="50" ry="62" fill="#ddd8c8"/>
+      <ellipse cx="82" cy="82" rx="15" ry="12" fill="#c8c0b0" opacity="0.5"/>
+      <ellipse cx="118" cy="82" rx="15" ry="12" fill="#c8c0b0" opacity="0.5"/>
+      <ellipse cx="100" cy="108" rx="18" ry="8" fill="#c0b8a8" opacity="0.4"/>
+      <path d="M72 44 Q65 22 60 10" stroke="#333" stroke-width="2" fill="none"/>
+      <path d="M100 36 Q100 14 100 4" stroke="#333" stroke-width="2" fill="none"/>
+      <path d="M128 44 Q135 22 140 10" stroke="#333" stroke-width="2" fill="none"/>`,
+    blank:`<ellipse cx="100" cy="100" rx="48" ry="58" fill="#111"/>
+      <ellipse cx="80" cy="85" rx="17" ry="13" fill="#1a1a1a"/>
+      <ellipse cx="120" cy="85" rx="17" ry="13" fill="#1a1a1a"/>
+      <ellipse cx="100" cy="112" rx="22" ry="11" fill="#131313"/>`,
+    round:`<ellipse cx="100" cy="100" rx="55" ry="55" fill="#cc6600" opacity="0.5"/>
+      <ellipse cx="100" cy="100" rx="50" ry="50" fill="#221000"/>
+      <ellipse cx="82" cy="88" rx="14" ry="13" fill="#ff8800"/>
+      <ellipse cx="118" cy="88" rx="14" ry="13" fill="#ff8800"/>
+      <ellipse cx="82" cy="89" rx="6" ry="7" fill="#000"/>
+      <ellipse cx="118" cy="89" rx="6" ry="7" fill="#000"/>
+      <path d="M80 110 Q100 122 120 110" fill="#1a0800"/>
+      <polygon points="85,110 83,120 89,110" fill="#eee"/>
+      <polygon points="111,110 109,120 115,110" fill="#eee"/>`,
+    weep:`<ellipse cx="100" cy="95" rx="42" ry="55" fill="#c8d8e8"/>
+      <ellipse cx="83" cy="80" rx="13" ry="15" fill="#fff"/>
+      <ellipse cx="117" cy="80" rx="13" ry="15" fill="#fff"/>
+      <ellipse cx="83" cy="83" rx="7" ry="5" fill="#cce0ff" opacity="0.7"/>
+      <ellipse cx="117" cy="83" rx="7" ry="5" fill="#cce0ff" opacity="0.7"/>
+      <path d="M80 93 Q79 108 80 118" stroke="#88aacc" stroke-width="3" fill="none"/>
+      <path d="M117 93 Q118 108 117 118" stroke="#88aacc" stroke-width="3" fill="none"/>
+      <path d="M72 108 Q100 130 125 108" fill="#1a0a0a"/>
+      <rect x="84" y="108" width="8" height="12" fill="#ddd" rx="1"/>
+      <rect x="96" y="108" width="8" height="14" fill="#ddd" rx="1"/>
+      <rect x="108" y="108" width="8" height="12" fill="#ddd" rx="1"/>`,
+    hand:`<ellipse cx="100" cy="90" rx="40" ry="50" fill="#c8b898" opacity="0.8"/>
+      <ellipse cx="86" cy="78" rx="11" ry="13" fill="#443322"/>
+      <ellipse cx="114" cy="78" rx="11" ry="13" fill="#443322"/>
+      <ellipse cx="86" cy="79" rx="5" ry="7" fill="#fff"/>
+      <ellipse cx="114" cy="79" rx="5" ry="7" fill="#fff"/>
+      <path d="M78 100 Q100 114 122 100" fill="#2a1800"/>
+      <path d="M30 140 Q50 120 70 130 Q60 110 80 115" stroke="#c8b898" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <path d="M78 115 Q74 100 72 90" stroke="#c8b898" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M172 140 Q150 120 130 130 Q140 110 120 115" stroke="#c8b898" stroke-width="10" fill="none" stroke-linecap="round"/>`,
+    bug:`<ellipse cx="100" cy="110" rx="42" ry="35" fill="#1a3300"/>
+      <ellipse cx="100" cy="85" rx="30" ry="28" fill="#224400"/>
+      <ellipse cx="82" cy="78" rx="12" ry="11" fill="#aaff00"/>
+      <ellipse cx="118" cy="78" rx="12" ry="11" fill="#aaff00"/>
+      <ellipse cx="82" cy="79" rx="5" ry="6" fill="#000"/>
+      <ellipse cx="118" cy="79" rx="5" ry="6" fill="#000"/>
+      <line x1="50" y1="95" x2="20" y2="75" stroke="#1a3300" stroke-width="3"/>
+      <line x1="50" y1="105" x2="15" y2="100" stroke="#1a3300" stroke-width="3"/>
+      <line x1="50" y1="115" x2="20" y2="130" stroke="#1a3300" stroke-width="3"/>
+      <line x1="150" y1="95" x2="180" y2="75" stroke="#1a3300" stroke-width="3"/>
+      <line x1="150" y1="105" x2="185" y2="100" stroke="#1a3300" stroke-width="3"/>
+      <line x1="150" y1="115" x2="180" y2="130" stroke="#1a3300" stroke-width="3"/>`,
+    plague:`<ellipse cx="100" cy="100" rx="48" ry="52" fill="#1a2a00" opacity="0.9"/>
+      <ellipse cx="100" cy="100" rx="45" ry="49" fill="#223300"/>
+      <ellipse cx="80" cy="85" rx="16" ry="14" fill="#88cc00"/>
+      <ellipse cx="120" cy="85" rx="16" ry="14" fill="#88cc00"/>
+      <ellipse cx="80" cy="86" rx="7" ry="8" fill="#000"/>
+      <ellipse cx="120" cy="86" rx="7" ry="8" fill="#000"/>
+      <circle cx="77" cy="83" r="2" fill="#ccff00" opacity="0.7"/>
+      <circle cx="117" cy="83" r="2" fill="#ccff00" opacity="0.7"/>
+      <ellipse cx="100" cy="118" rx="25" ry="12" fill="#112200"/>
+      <circle cx="65" cy="60" r="8" fill="#336600" opacity="0.6"/>
+      <circle cx="140" cy="55" r="6" fill="#336600" opacity="0.6"/>
+      <circle cx="150" cy="130" r="7" fill="#336600" opacity="0.5"/>`,
+    // rare
+    spiky:`<path d="" fill="none"/>
+      ${[...Array(12)].map((_,i)=>{const a=(i/12)*Math.PI*2-Math.PI/2,r=i%2===0?65:40,x=100+Math.cos(a)*r,y=100+Math.sin(a)*r;return i===0?`<path d="M${x},${y}`:` L${x},${y}`;}).join('')} Z" fill="#2a0050"/>
+      <ellipse cx="85" cy="95" rx="12" ry="14" fill="#9900ff"/>
+      <ellipse cx="115" cy="95" rx="12" ry="14" fill="#9900ff"/>
+      <ellipse cx="85" cy="96" rx="5" ry="7" fill="#000"/>
+      <ellipse cx="115" cy="96" rx="5" ry="7" fill="#000"/>
+      <path d="M78 112 Q100 126 122 112" fill="#1a0030"/>
+      <polygon points="83,112 80,124 88,112" fill="#cc88ff"/>
+      <polygon points="96,115 93,127 101,115" fill="#cc88ff"/>
+      <polygon points="112,112 109,124 117,112" fill="#cc88ff"/>`,
+    weep2:`<path d="M60 55 Q40 95 42 155" stroke="#111" stroke-width="5" fill="none"/>
+      <path d="M140 55 Q160 95 158 155" stroke="#111" stroke-width="5" fill="none"/>
+      <path d="M75 50 Q62 110 65 165" stroke="#0a0a0a" stroke-width="4" fill="none"/>
+      <path d="M125 50 Q138 110 135 165" stroke="#0a0a0a" stroke-width="4" fill="none"/>
+      <ellipse cx="100" cy="92" rx="42" ry="50" fill="#aabbd0"/>
+      <ellipse cx="83" cy="80" rx="13" ry="15" fill="#fff"/>
+      <ellipse cx="117" cy="80" rx="13" ry="15" fill="#fff"/>
+      <ellipse cx="83" cy="83" rx="6" ry="4" fill="#cce0ff" opacity="0.7"/>
+      <ellipse cx="117" cy="83" rx="6" ry="4" fill="#cce0ff" opacity="0.7"/>
+      <path d="M72 108 Q100 128 128 108" fill="#1a0a0a"/>
+      <rect x="84" y="108" width="8" height="12" fill="#ddd" rx="1"/>
+      <rect x="96" y="108" width="8" height="14" fill="#ddd" rx="1"/>
+      <rect x="108" y="108" width="8" height="12" fill="#ddd" rx="1"/>`,
+    cat:`<polygon points="55,62 42,22 72,47" fill="#0a2a0a"/>
+      <polygon points="145,62 158,22 128,47" fill="#0a2a0a"/>
+      <ellipse cx="100" cy="97" rx="48" ry="50" fill="#112211"/>
+      <ellipse cx="80" cy="85" rx="16" ry="14" fill="#88ff00"/>
+      <ellipse cx="120" cy="85" rx="16" ry="14" fill="#88ff00"/>
+      <line x1="80" y1="73" x2="80" y2="97" stroke="#000" stroke-width="6"/>
+      <line x1="120" y1="73" x2="120" y2="97" stroke="#000" stroke-width="6"/>
+      <circle cx="77" cy="81" r="2" fill="#fff" opacity="0.6"/>
+      <circle cx="117" cy="81" r="2" fill="#fff" opacity="0.6"/>
+      <line x1="50" y1="103" x2="85" y2="105" stroke="#224422" stroke-width="1.5"/>
+      <line x1="50" y1="110" x2="85" y2="110" stroke="#224422" stroke-width="1.5"/>
+      <line x1="150" y1="103" x2="115" y2="105" stroke="#224422" stroke-width="1.5"/>
+      <line x1="150" y1="110" x2="115" y2="110" stroke="#224422" stroke-width="1.5"/>
+      <path d="M85 115 Q100 127 115 115" stroke="#225522" stroke-width="2" fill="none"/>
+      <polygon points="89,115 87,123 93,115" fill="#ddd" opacity="0.9"/>
+      <polygon points="107,115 105,123 111,115" fill="#ddd" opacity="0.9"/>`,
+    dark:`<path d="M100 180 Q40 160 35 110 Q30 60 65 40 Q50 70 70 68 Q65 45 80 28 Q85 55 95 50 Q90 30 100 10 Q110 30 105 50 Q115 55 120 28 Q135 45 130 68 Q150 70 135 40 Q170 60 165 110 Q160 160 100 180Z" fill="#0a0a0a"/>
+      <ellipse cx="82" cy="90" rx="14" ry="16" fill="#ff0000"/>
+      <ellipse cx="118" cy="90" rx="14" ry="16" fill="#ff0000"/>
+      <ellipse cx="82" cy="91" rx="6" ry="8" fill="#000"/>
+      <ellipse cx="118" cy="91" rx="6" ry="8" fill="#000"/>
+      <circle cx="79" cy="86" r="2.5" fill="#ff8888" opacity="0.8"/>
+      <circle cx="115" cy="86" r="2.5" fill="#ff8888" opacity="0.8"/>
+      <path d="M72 112 Q100 128 128 112" fill="#050505"/>
+      <polygon points="77,112 74,126 82,112" fill="#cc0000" opacity="0.9"/>
+      <polygon points="91,116 89,130 96,116" fill="#cc0000" opacity="0.9"/>
+      <polygon points="104,116 102,130 109,116" fill="#cc0000" opacity="0.9"/>
+      <polygon points="118,112 116,126 123,112" fill="#cc0000" opacity="0.9"/>`,
+    wisp:`<ellipse cx="70" cy="110" rx="28" ry="32" fill="#1a1166" opacity="0.7"/>
+      <ellipse cx="130" cy="110" rx="28" ry="32" fill="#1a1166" opacity="0.7"/>
+      <ellipse cx="100" cy="90" rx="35" ry="40" fill="#2233aa"/>
+      <ellipse cx="88" cy="82" rx="11" ry="13" fill="#00ccff"/>
+      <ellipse cx="112" cy="82" rx="11" ry="13" fill="#00ccff"/>
+      <ellipse cx="88" cy="83" rx="5" ry="7" fill="#000"/>
+      <ellipse cx="112" cy="83" rx="5" ry="7" fill="#000"/>
+      <ellipse cx="58" cy="102" rx="7" ry="8" fill="#0088ff" opacity="0.8"/>
+      <ellipse cx="142" cy="102" rx="7" ry="8" fill="#0088ff" opacity="0.8"/>
+      <ellipse cx="58" cy="103" rx="3" ry="4" fill="#000"/>
+      <ellipse cx="142" cy="103" rx="3" ry="4" fill="#000"/>
+      <path d="M78 102 Q100 114 122 102" stroke="#0055aa" stroke-width="2" fill="none"/>`,
+    dokkaebi:`<ellipse cx="100" cy="100" rx="50" ry="55" fill="#cc2200"/>
+      <polygon points="72,52 62,20 80,48" fill="#aa1100"/>
+      <polygon points="128,52 138,20 120,48" fill="#aa1100"/>
+      <ellipse cx="82" cy="82" rx="14" ry="15" fill="#ffff00"/>
+      <ellipse cx="118" cy="82" rx="14" ry="15" fill="#ffff00"/>
+      <ellipse cx="82" cy="83" rx="7" ry="8" fill="#000"/>
+      <ellipse cx="118" cy="83" rx="7" ry="8" fill="#000"/>
+      <circle cx="79" cy="79" r="2" fill="#fff" opacity="0.8"/>
+      <circle cx="115" cy="79" r="2" fill="#fff" opacity="0.8"/>
+      <path d="M100 92 L96 100 L100 105 L104 100 Z" fill="#cc8800"/>
+      <path d="M72 108 Q100 125 128 108" fill="#880000"/>
+      <polygon points="78,108 75,122 83,108" fill="#fff"/>
+      <polygon points="93,112 90,126 98,112" fill="#fff"/>
+      <polygon points="102,112 99,126 107,112" fill="#fff"/>
+      <polygon points="117,108 114,122 122,108" fill="#fff"/>`,
+    tall:`<ellipse cx="100" cy="100" rx="32" ry="72" fill="#003333"/>
+      <ellipse cx="85" cy="62" rx="12" ry="14" fill="#00ffaa"/>
+      <ellipse cx="115" cy="62" rx="12" ry="14" fill="#00ffaa"/>
+      <ellipse cx="85" cy="63" rx="5" ry="7" fill="#000"/>
+      <ellipse cx="115" cy="63" rx="5" ry="7" fill="#000"/>
+      <path d="M72 80 Q100 93 128 80" fill="#001a1a"/>
+      <polygon points="78,80 75,92 83,80" fill="#ddf0ee"/>
+      <polygon points="94,83 91,95 99,83" fill="#ddf0ee"/>
+      <polygon points="101,83 98,95 106,83" fill="#ddf0ee"/>
+      <polygon points="117,80 114,92 122,80" fill="#ddf0ee"/>
+      <path d="M62 110 Q40 128 30 155" stroke="#002a2a" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <path d="M138 110 Q160 128 170 155" stroke="#002a2a" stroke-width="10" fill="none" stroke-linecap="round"/>`,
+    water:`<ellipse cx="100" cy="100" rx="48" ry="55" fill="#001840" opacity="0.9"/>
+      <path d="M55 80 Q100 60 145 80 Q145 140 100 160 Q55 140 55 80Z" fill="#002255" opacity="0.8"/>
+      <ellipse cx="82" cy="88" rx="14" ry="13" fill="#00aaff"/>
+      <ellipse cx="118" cy="88" rx="14" ry="13" fill="#00aaff"/>
+      <ellipse cx="82" cy="89" rx="6" ry="7" fill="#000"/>
+      <ellipse cx="118" cy="89" rx="6" ry="7" fill="#000"/>
+      <circle cx="79" cy="85" r="2" fill="#aaddff" opacity="0.7"/>
+      <circle cx="115" cy="85" r="2" fill="#aaddff" opacity="0.7"/>
+      <path d="M78 110 Q100 122 122 110" stroke="#00aaff" stroke-width="2" fill="none"/>
+      <path d="M55 160 Q60 180 70 195" stroke="#002255" stroke-width="6" fill="none" opacity="0.6"/>
+      <path d="M100 165 Q100 182 100 198" stroke="#002255" stroke-width="6" fill="none" opacity="0.6"/>
+      <path d="M145 160 Q140 180 130 195" stroke="#002255" stroke-width="6" fill="none" opacity="0.6"/>`,
+    // epic
+    flame:`<path d="M100 178 Q48 155 38 108 Q28 65 62 44 Q56 78 73 72 Q67 48 82 28 Q87 58 97 53 Q92 32 100 12 Q108 32 103 53 Q113 58 118 28 Q133 48 127 72 Q144 78 138 44 Q172 65 162 108 Q152 155 100 178Z" fill="#cc3300"/>
+      <path d="M100 155 Q62 136 60 102 Q58 70 78 58 Q75 80 85 76 Q83 58 93 43 Q96 63 103 58 Q110 63 107 43 Q117 58 115 76 Q125 80 122 58 Q142 70 140 102 Q138 136 100 155Z" fill="#ff4400"/>
+      <path d="M100 128 Q74 115 72 95 Q70 76 86 68 Q85 82 92 80 Q91 68 97 57 Q103 68 108 57 Q114 68 113 80 Q120 82 119 68 Q135 76 133 95 Q131 115 100 128Z" fill="#ff8800"/>
+      <ellipse cx="86" cy="87" rx="11" ry="13" fill="#ffff00"/>
+      <ellipse cx="114" cy="87" rx="11" ry="13" fill="#ffff00"/>
+      <ellipse cx="86" cy="88" rx="5" ry="7" fill="#000"/>
+      <ellipse cx="114" cy="88" rx="5" ry="7" fill="#000"/>
+      <path d="M80 108 Q100 120 120 108" fill="#880000"/>
+      <polygon points="85,108 82,120 90,108" fill="#fff"/>
+      <polygon points="96,111 93,123 101,111" fill="#fff"/>
+      <polygon points="110,108 107,120 115,108" fill="#fff"/>`,
+    old:`<path d="M65 55 Q50 38 52 18" stroke="#aaa" stroke-width="5" fill="none"/>
+      <path d="M100 48 Q100 26 100 8" stroke="#ccc" stroke-width="6" fill="none"/>
+      <path d="M135 55 Q150 38 148 18" stroke="#aaa" stroke-width="5" fill="none"/>
+      <ellipse cx="100" cy="88" rx="40" ry="45" fill="#8a6a3a"/>
+      <path d="M65 72 Q70 77 65 82" stroke="#6a4a1a" stroke-width="2" fill="none"/>
+      <path d="M135 72 Q130 77 135 82" stroke="#6a4a1a" stroke-width="2" fill="none"/>
+      <ellipse cx="83" cy="78" rx="11" ry="9" fill="#cc4400"/>
+      <ellipse cx="117" cy="78" rx="11" ry="9" fill="#cc4400"/>
+      <ellipse cx="83" cy="78" rx="5" ry="4" fill="#000"/>
+      <ellipse cx="117" cy="78" rx="5" ry="4" fill="#000"/>
+      <path d="M97 84 Q93 94 96 98 Q100 101 104 98 Q107 94 103 84" stroke="#6a4a1a" stroke-width="2" fill="none"/>
+      <path d="M76 106 Q100 118 124 106" fill="#1a0000"/>
+      <rect x="90" y="106" width="6" height="8" fill="#c8b898" rx="1"/>
+      <rect x="104" y="106" width="6" height="8" fill="#c8b898" rx="1"/>`,
+    heron:`<ellipse cx="100" cy="112" rx="32" ry="75" fill="#002222"/>
+      <ellipse cx="100" cy="72" rx="38" ry="45" fill="#003333"/>
+      <ellipse cx="85" cy="58" rx="12" ry="14" fill="#00ffaa"/>
+      <ellipse cx="115" cy="58" rx="12" ry="14" fill="#00ffaa"/>
+      <ellipse cx="85" cy="59" rx="5" ry="7" fill="#000"/>
+      <ellipse cx="115" cy="59" rx="5" ry="7" fill="#000"/>
+      <circle cx="82" cy="55" r="2" fill="#fff" opacity="0.7"/>
+      <circle cx="112" cy="55" r="2" fill="#fff" opacity="0.7"/>
+      <path d="M72 80 Q100 94 128 80" fill="#001a1a"/>
+      <polygon points="78,80 75,94 83,80" fill="#ddf0ee"/>
+      <polygon points="94,83 91,97 99,83" fill="#ddf0ee"/>
+      <polygon points="101,83 98,97 106,83" fill="#ddf0ee"/>
+      <polygon points="117,80 114,94 122,80" fill="#ddf0ee"/>
+      <path d="M62 102 Q40 122 30 148" stroke="#002a2a" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <path d="M138 102 Q160 122 170 148" stroke="#002a2a" stroke-width="10" fill="none" stroke-linecap="round"/>`,
+    half:`<path d="M50 162 Q55 132 60 117 Q75 102 100 100 Q125 102 140 117 Q145 132 150 162Z" fill="#1a1a44"/>
+      <ellipse cx="100" cy="84" rx="44" ry="50" fill="#111188"/>
+      <ellipse cx="84" cy="70" rx="13" ry="15" fill="#cc00ff"/>
+      <ellipse cx="116" cy="70" rx="13" ry="15" fill="#cc00ff"/>
+      <ellipse cx="84" cy="71" rx="6" ry="8" fill="#000"/>
+      <ellipse cx="116" cy="71" rx="6" ry="8" fill="#000"/>
+      <circle cx="81" cy="67" r="2" fill="#fff" opacity="0.8"/>
+      <circle cx="113" cy="67" r="2" fill="#fff" opacity="0.8"/>
+      <path d="M78 94 Q100 108 122 94" fill="#0a0015"/>
+      <polygon points="83,94 80,106 88,94" fill="#eeddff"/>
+      <polygon points="97,97 94,109 102,97" fill="#eeddff"/>
+      <polygon points="112,94 109,106 117,94" fill="#eeddff"/>
+      <path d="M45 160 Q100 164 155 160" stroke="#3333aa" stroke-width="2" fill="none" stroke-dasharray="8,5" opacity="0.6"/>`,
+    fox:`<ellipse cx="100" cy="95" rx="45" ry="52" fill="#cc5500"/>
+      <polygon points="65,55 50,15 80,48" fill="#cc4400"/>
+      <polygon points="68,53 56,20 78,46" fill="#ffaa44"/>
+      <polygon points="135,55 150,15 120,48" fill="#cc4400"/>
+      <polygon points="132,53 144,20 122,46" fill="#ffaa44"/>
+      <ellipse cx="82" cy="80" rx="13" ry="12" fill="#fff"/>
+      <ellipse cx="118" cy="80" rx="13" ry="12" fill="#fff"/>
+      <ellipse cx="82" cy="81" rx="5" ry="7" fill="#000"/>
+      <ellipse cx="118" cy="81" rx="5" ry="7" fill="#000"/>
+      <path d="M97 90 L100 95 L103 90 Z" fill="#cc5500"/>
+      <path d="M78 108 Q100 120 122 108" stroke="#aa4400" stroke-width="2" fill="none"/>
+      <polygon points="83,108 81,118 87,108" fill="#fff"/>
+      <polygon points="113,108 111,118 117,108" fill="#fff"/>`,
+    snake:`<ellipse cx="100" cy="70" rx="40" ry="45" fill="#0a3300"/>
+      <path d="M60 115 Q30 130 20 160" stroke="#0a3300" stroke-width="22" fill="none" stroke-linecap="round"/>
+      <path d="M60 115 Q80 150 60 180" stroke="#0a3300" stroke-width="16" fill="none" stroke-linecap="round"/>
+      <path d="M140 115 Q170 130 180 160" stroke="#0a3300" stroke-width="22" fill="none" stroke-linecap="round"/>
+      <ellipse cx="82" cy="60" rx="14" ry="13" fill="#aaff00"/>
+      <ellipse cx="118" cy="60" rx="14" ry="13" fill="#aaff00"/>
+      <ellipse cx="82" cy="61" rx="4" ry="8" fill="#000"/>
+      <ellipse cx="118" cy="61" rx="4" ry="8" fill="#000"/>
+      <path d="M78 80 Q100 88 122 80" fill="#062200"/>
+      <path d="M92 88 Q96 98 100 94 Q104 98 108 88" stroke="#ff0000" stroke-width="2" fill="none"/>`,
+    yaksha:`<ellipse cx="100" cy="100" rx="50" ry="58" fill="#660000"/>
+      <polygon points="78,50 68,18 86,46" fill="#550000"/>
+      <polygon points="122,50 132,18 114,46" fill="#550000"/>
+      <ellipse cx="80" cy="82" rx="15" ry="16" fill="#ff4400"/>
+      <ellipse cx="120" cy="82" rx="15" ry="16" fill="#ff4400"/>
+      <ellipse cx="80" cy="83" rx="7" ry="9" fill="#000"/>
+      <ellipse cx="120" cy="83" rx="7" ry="9" fill="#000"/>
+      <circle cx="77" cy="78" r="2.5" fill="#fff" opacity="0.8"/>
+      <circle cx="117" cy="78" r="2.5" fill="#fff" opacity="0.8"/>
+      <path d="M70 110 Q100 130 130 110" fill="#330000"/>
+      <polygon points="76,110 73,128 82,110" fill="#fff"/>
+      <polygon points="89,115 86,133 95,115" fill="#fff"/>
+      <polygon points="105,115 102,133 111,115" fill="#fff"/>
+      <polygon points="118,110 115,128 124,110" fill="#fff"/>`,
+    douk:`<ellipse cx="100" cy="100" rx="58" ry="62" fill="#1a0028"/>
+      <ellipse cx="100" cy="100" rx="54" ry="58" fill="#220033"/>
+      <ellipse cx="78" cy="85" rx="18" ry="16" fill="#aa00ff"/>
+      <ellipse cx="122" cy="85" rx="18" ry="16" fill="#aa00ff"/>
+      <ellipse cx="78" cy="86" rx="9" ry="10" fill="#000"/>
+      <ellipse cx="122" cy="86" rx="9" ry="10" fill="#000"/>
+      <circle cx="74" cy="81" r="3" fill="#fff" opacity="0.8"/>
+      <circle cx="118" cy="81" r="3" fill="#fff" opacity="0.8"/>
+      <path d="M68 115 Q100 135 132 115" fill="#110020"/>
+      <polygon points="74,115 71,132 80,115" fill="#dd88ff"/>
+      <polygon points="88,120 85,137 94,120" fill="#dd88ff"/>
+      <polygon points="102,120 99,137 108,120" fill="#dd88ff"/>
+      <polygon points="120,115 117,132 126,115" fill="#dd88ff"/>`,
+    // legendary
+    crown:`<path d="M55 68 L55 30 L72 52 L100 20 L128 52 L145 30 L145 68Z" fill="#cc0044"/>
+      <path d="M58 68 L58 34 L73 54 L100 25 L127 54 L142 34 L142 68Z" fill="#ff0066"/>
+      <circle cx="100" cy="23" r="6" fill="#ffdd00"/>
+      <circle cx="73" cy="53" r="4" fill="#ffdd00"/>
+      <circle cx="127" cy="53" r="4" fill="#ffdd00"/>
+      <ellipse cx="100" cy="110" rx="46" ry="52" fill="#aa0033"/>
+      <path d="M90 72 Q95 87 88 102" stroke="#ff0066" stroke-width="1.5" fill="none" opacity="0.7"/>
+      <path d="M112 74 Q107 90 114 105" stroke="#ff0066" stroke-width="1.5" fill="none" opacity="0.7"/>
+      <ellipse cx="82" cy="98" rx="14" ry="16" fill="#ffff00"/>
+      <ellipse cx="118" cy="98" rx="14" ry="16" fill="#ffff00"/>
+      <ellipse cx="82" cy="99" rx="7" ry="9" fill="#000"/>
+      <ellipse cx="118" cy="99" rx="7" ry="9" fill="#000"/>
+      <circle cx="79" cy="94" r="2.5" fill="#fff" opacity="0.9"/>
+      <circle cx="115" cy="94" r="2.5" fill="#fff" opacity="0.9"/>
+      <path d="M68 125 Q100 148 132 125" fill="#000"/>
+      <polygon points="74,125 71,140 80,125" fill="#fff"/>
+      <polygon points="88,129 85,144 94,129" fill="#fff"/>
+      <polygon points="100,131 97,146 105,131" fill="#fff"/>
+      <polygon points="112,129 109,144 118,129" fill="#fff"/>
+      <polygon points="124,125 121,140 130,125" fill="#fff"/>`,
+    multi:`<ellipse cx="100" cy="78" rx="40" ry="45" fill="#4a0015"/>
+      <ellipse cx="55" cy="108" rx="28" ry="32" fill="#380010"/>
+      <ellipse cx="145" cy="108" rx="28" ry="32" fill="#380010"/>
+      <ellipse cx="85" cy="65" rx="12" ry="14" fill="#ffcc00"/>
+      <ellipse cx="115" cy="65" rx="12" ry="14" fill="#ffcc00"/>
+      <ellipse cx="85" cy="66" rx="5" ry="7" fill="#000"/>
+      <ellipse cx="115" cy="66" rx="5" ry="7" fill="#000"/>
+      <ellipse cx="45" cy="100" rx="8" ry="9" fill="#ff4400"/>
+      <ellipse cx="65" cy="100" rx="8" ry="9" fill="#ff4400"/>
+      <ellipse cx="45" cy="101" rx="4" ry="5" fill="#000"/>
+      <ellipse cx="65" cy="101" rx="4" ry="5" fill="#000"/>
+      <ellipse cx="135" cy="100" rx="8" ry="9" fill="#ff4400"/>
+      <ellipse cx="155" cy="100" rx="8" ry="9" fill="#ff4400"/>
+      <ellipse cx="135" cy="101" rx="4" ry="5" fill="#000"/>
+      <ellipse cx="155" cy="101" rx="4" ry="5" fill="#000"/>
+      <path d="M72 90 Q100 107 128 90" fill="#0a0005"/>
+      <polygon points="77,90 74,104 82,90" fill="#fff"/>
+      <polygon points="90,94 87,108 95,94" fill="#fff"/>
+      <polygon points="105,94 102,108 110,94" fill="#fff"/>
+      <polygon points="118,90 115,104 123,90" fill="#fff"/>`,
+    reaper:`<path d="M100 170 Q40 155 38 105 Q36 55 70 38" stroke="#1a1a22" stroke-width="25" fill="none" stroke-linecap="round"/>
+      <path d="M100 170 Q160 155 162 105 Q164 55 130 38" stroke="#1a1a22" stroke-width="25" fill="none" stroke-linecap="round"/>
+      <path d="M60 38 Q80 15 100 10 Q120 15 140 38" stroke="#1a1a22" stroke-width="25" fill="none" stroke-linecap="round"/>
+      <ellipse cx="100" cy="95" rx="38" ry="42" fill="#111122"/>
+      <ellipse cx="82" cy="85" rx="16" ry="18" fill="#4444ff" opacity="0.9"/>
+      <ellipse cx="118" cy="85" rx="16" ry="18" fill="#4444ff" opacity="0.9"/>
+      <ellipse cx="82" cy="86" rx="7" ry="9" fill="#000"/>
+      <ellipse cx="118" cy="86" rx="7" ry="9" fill="#000"/>
+      <circle cx="79" cy="82" r="3" fill="#8888ff" opacity="0.9"/>
+      <circle cx="115" cy="82" r="3" fill="#8888ff" opacity="0.9"/>
+      <path d="M78 110 Q100 122 122 110" stroke="#4444ff" stroke-width="2" fill="none"/>
+      <path d="M150 10 Q170 30 175 55 Q170 50 162 52 Q168 45 165 60" stroke="#aaaaaa" stroke-width="4" fill="none"/>`,
+    samsung:`<ellipse cx="100" cy="92" rx="48" ry="55" fill="#5a3a1a"/>
+      <path d="M58 50 Q48 25 52 8" stroke="#888" stroke-width="6" fill="none"/>
+      <path d="M82 42 Q78 18 80 5" stroke="#999" stroke-width="4" fill="none"/>
+      <path d="M118 42 Q122 18 120 5" stroke="#999" stroke-width="4" fill="none"/>
+      <path d="M142 50 Q152 25 148 8" stroke="#888" stroke-width="6" fill="none"/>
+      <ellipse cx="82" cy="78" rx="13" ry="14" fill="#ff6600"/>
+      <ellipse cx="118" cy="78" rx="13" ry="14" fill="#ff6600"/>
+      <ellipse cx="82" cy="79" rx="6" ry="7" fill="#000"/>
+      <ellipse cx="118" cy="79" rx="6" ry="7" fill="#000"/>
+      <circle cx="79" cy="75" r="2" fill="#fff" opacity="0.7"/>
+      <circle cx="115" cy="75" r="2" fill="#fff" opacity="0.7"/>
+      <path d="M78 104 Q100 118 122 104" fill="#2a1500"/>
+      <rect x="88" y="104" width="8" height="10" fill="#ddd" rx="1"/>
+      <rect x="102" y="104" width="8" height="10" fill="#ddd" rx="1"/>
+      <path d="M60 148 Q40 155 30 170" stroke="#5a3a1a" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M140 148 Q160 155 170 170" stroke="#5a3a1a" stroke-width="12" fill="none" stroke-linecap="round"/>`,
+    // boss
+    boss1:`<ellipse cx="100" cy="100" rx="80" ry="85" fill="#1a0000" opacity="0.8"/>
+      <ellipse cx="100" cy="100" rx="72" ry="78" fill="#220000"/>
+      <polygon points="30,40 15,5 42,35" fill="#660000"/>
+      <polygon points="170,40 185,5 158,35" fill="#660000"/>
+      <polygon points="75,28 65,2 82,25" fill="#880000"/>
+      <polygon points="125,28 135,2 118,25" fill="#880000"/>
+      <ellipse cx="72" cy="78" rx="20" ry="22" fill="#ff0000"/>
+      <ellipse cx="128" cy="78" rx="20" ry="22" fill="#ff0000"/>
+      <ellipse cx="72" cy="79" rx="10" ry="13" fill="#000"/>
+      <ellipse cx="128" cy="79" rx="10" ry="13" fill="#000"/>
+      <circle cx="67" cy="73" r="4" fill="#ff8888" opacity="0.9"/>
+      <circle cx="123" cy="73" r="4" fill="#ff8888" opacity="0.9"/>
+      <ellipse cx="100" cy="78" rx="10" ry="12" fill="#ff4400" opacity="0.7"/>
+      <ellipse cx="100" cy="79" rx="5" ry="7" fill="#000"/>
+      <path d="M52 118 Q100 148 148 118" fill="#0a0000"/>
+      <polygon points="58,118 54,138 65,118" fill="#fff"/>
+      <polygon points="74,124 70,144 81,124" fill="#fff"/>
+      <polygon points="89,128 85,148 97,128" fill="#fff"/>
+      <polygon points="100,130 96,150 107,130" fill="#fff"/>
+      <polygon points="103,128 99,148 111,128" fill="#fff"/>
+      <polygon points="119,124 115,144 126,124" fill="#fff"/>
+      <polygon points="135,118 131,138 142,118" fill="#fff"/>
+      <ellipse cx="100" cy="100" rx="75" ry="80" fill="none" stroke="#ff0000" stroke-width="2" opacity="0.3"/>
+      <ellipse cx="100" cy="100" rx="85" ry="90" fill="none" stroke="#ff0000" stroke-width="1" opacity="0.15"/>`,
+    boss2:`<ellipse cx="100" cy="100" rx="85" ry="90" fill="#0a0010" opacity="0.9"/>
+      <ellipse cx="100" cy="100" rx="78" ry="82" fill="#12001a"/>
+      <path d="M40 45 L28 8 L45 38 L65 2 L72 40 L100 5 L128 40 L135 2 L155 38 L172 8 L160 45Z" fill="#6600aa"/>
+      <path d="M43 45 L32 12 L47 41 L66 8 L73 43 L100 10 L127 43 L134 8 L153 41 L168 12 L157 45Z" fill="#8800cc"/>
+      <circle cx="65" cy="8" r="5" fill="#ffdd00"/>
+      <circle cx="100" cy="7" r="6" fill="#ffdd00"/>
+      <circle cx="135" cy="8" r="5" fill="#ffdd00"/>
+      <ellipse cx="70" cy="75" rx="18" ry="20" fill="#cc00ff"/>
+      <ellipse cx="130" cy="75" rx="18" ry="20" fill="#cc00ff"/>
+      <ellipse cx="100" cy="70" rx="14" ry="16" fill="#ff00ff"/>
+      <ellipse cx="70" cy="76" rx="9" ry="11" fill="#000"/>
+      <ellipse cx="130" cy="76" rx="9" ry="11" fill="#000"/>
+      <ellipse cx="100" cy="71" rx="7" ry="9" fill="#000"/>
+      <circle cx="65" cy="70" r="3.5" fill="#fff" opacity="0.9"/>
+      <circle cx="125" cy="70" r="3.5" fill="#fff" opacity="0.9"/>
+      <circle cx="96" cy="65" r="3" fill="#fff" opacity="0.9"/>
+      <path d="M48 120 Q100 152 152 120" fill="#050008"/>
+      <polygon points="54,120 50,142 60,120" fill="#fff"/>
+      <polygon points="68,127 64,149 75,127" fill="#fff"/>
+      <polygon points="82,132 78,154 89,132" fill="#fff"/>
+      <polygon points="95,134 91,156 103,134" fill="#fff"/>
+      <polygon points="111,132 107,154 118,132" fill="#fff"/>
+      <polygon points="125,127 121,149 132,127" fill="#fff"/>
+      <polygon points="140,120 136,142 146,120" fill="#fff"/>
+      <ellipse cx="100" cy="100" rx="82" ry="86" fill="none" stroke="#aa00ff" stroke-width="2" opacity="0.4"/>`,
+  };
+
+  const bgColors={
+    common:'#0a0808',rare:'#060015',epic:'#0a0015',legendary:'#100008',boss:'#1a0000'
+  };
+  const glowColors={
+    common:'rgba(255,0,0,0.1)',rare:'rgba(68,136,255,0.15)',epic:'rgba(170,68,255,0.15)',
+    legendary:'rgba(255,170,0,0.2)',boss:'rgba(255,0,0,0.3)'
+  };
+  const bg=bgColors[g.rarity]||'#0a0808';
+  const glow=glowColors[g.rarity]||'rgba(255,0,0,0.1)';
+  const body=shapes[g.shape]||shapes.round;
+
+  return 'data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="gbg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="${bg}"/>
+      <stop offset="100%" stop-color="#000"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="${glow}"/>
+      <stop offset="80%" stop-color="transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#gbg)"/>
+  ${body}
+  <rect width="200" height="200" fill="url(#glow)"/>
+</svg>`)));
 }
 
-function updateHP() {
-    document.getElementById('hpfill').style.width = (currentHP / maxHP * 100) + '%';
+// ════════════════════════════════════════
+//  저장/상태
+// ════════════════════════════════════════
+function getCurWeapon(){return WEAPONS.find(w=>w.id===save.equippedWeapon)||WEAPONS[0];}
+function getWeaponLv(wid){return (save.weapons[wid]&&save.weapons[wid].lv)||1;}
+function getWeaponAtk(wid){
+  const w=WEAPONS.find(x=>x.id===wid);if(!w)return 10;
+  const lv=getWeaponLv(wid);
+  return Math.floor(w.atk*(1+0.15*(lv-1)));
+}
+function getPlayerAtk(){return getWeaponAtk(save.equippedWeapon);}
+
+// ════════════════════════════════════════
+//  게임 시작
+// ════════════════════════════════════════
+async function start(){
+  const video=document.getElementById('v');
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
+    video.srcObject=stream;
+    await video.play();
+    document.getElementById('det').textContent='👁 탐지중...';
+  }catch(e){
+    video.style.display='none';
+    document.getElementById('fakebg').style.display='block';
+    document.getElementById('det').textContent='⚠ 카메라 없음';
+  }
+
+  updateHUD();
+  radarLoop();
+
+  if('geolocation' in navigator)
+    navigator.geolocation.watchPosition(()=>{if(!appeared&&Math.random()>0.65)spawnGhost();},null,{enableHighAccuracy:true});
+  if(window.DeviceOrientationEvent){
+    let la=0;
+    window.addEventListener('deviceorientation',e=>{
+      if(!e.alpha)return;
+      if(Math.abs(e.alpha-la)>30&&!appeared){if(Math.random()>0.91)spawnGhost();la=e.alpha;}
+    });
+  }
+
+  // 귀신 이미지 터치
+  document.getElementById('ghost-img').addEventListener('touchstart',handleHit,{passive:false});
+  document.getElementById('ghost-img').addEventListener('mousedown',handleHit);
 }
 
-function attack() {
-    if(!currentGhost) return;
-    currentHP -= player.weaponDmg;
-    updateHP();
-    
-    const img = document.getElementById('ghost-img');
-    img.style.transform = 'scale(0.82)';
-    setTimeout(() => img.style.transform = 'scale(1)', 120);
-    
-    if(currentHP <= 0) {
-        const reward = Math.floor(currentGhost.hp * 18) + 120;
-        player.money += reward;
-        document.getElementById('moneytxt').textContent = player.money;
-        alert(`✅ ${currentGhost.name} 포획 성공!\n💰 ${reward}원 획득`);
-        document.getElementById('tw').style.display = 'none';
-        currentGhost = null;
+// ════════════════════════════════════════
+//  레이더
+// ════════════════════════════════════════
+let radarV=0,radarDir=1;
+function radarLoop(){
+  radarV+=radarDir*(Math.random()*2.2);
+  if(radarV>=100){radarV=100;radarDir=-1;}
+  if(radarV<=0){radarV=0;radarDir=1;}
+  document.getElementById('radar-fill').style.width=radarV+'%';
+  const d=document.getElementById('det');
+  if(radarV<30)d.textContent='👁 탐지중...';
+  else if(radarV<60)d.textContent='⚡ 반응 감지!';
+  else if(radarV<85)d.textContent='⚠️ 접근 중!';
+  else d.textContent='🚨 출현 임박!';
+  if(radarV>=99&&!appeared)spawnGhost();
+  setTimeout(radarLoop,80);
+}
+
+// ════════════════════════════════════════
+//  특별 이벤트 체크
+// ════════════════════════════════════════
+function checkSpecialEvents(){
+  // 3% 확률로 특별 귀신 이벤트 발동 (시간/날씨 무관)
+  if(Math.random()<0.03){
+    isSpecialRandom=true;
+    const msgs=['🌟 신비한 기운이 느껴진다!','⚡ 강력한 귀신의 기척이!','🔮 희귀한 귀신이 숨어있다!','💫 특별한 존재가 나타날 것 같다!'];
+    document.getElementById('event-banner').style.display='block';
+    document.getElementById('event-txt').textContent=msgs[Math.floor(Math.random()*msgs.length)];
+    setTimeout(()=>{document.getElementById('event-banner').style.display='none';isSpecialRandom=false;},8000);
+  }
+}
+
+// ════════════════════════════════════════
+//  귀신 소환
+// ════════════════════════════════════════
+function spawnGhost(){
+  appeared=true; radarV=0; sessionScore=0;
+  // 매 소환마다 3% 확률로 특별 이벤트
+  checkSpecialEvents();
+
+  // 귀신 풀 결정
+  let pool=[...ghosts];
+  // 특별 이벤트면 legendary/epic 확률 UP
+  if(isSpecialRandom) pool=[...pool,...ghosts.filter(g=>g.rarity==='legendary'),...ghosts.filter(g=>g.rarity==='epic')];
+  // 100마리 이상 + 보스 없으면 보스 추가
+  if(save.totalCatch>=50) pool=[...pool,...ghosts.filter(g=>g.rarity==='boss')];
+
+  // 희귀도 가중치
+  const rand=Math.random();
+  let filtered;
+  if(rand<0.02&&save.totalCatch>=50) filtered=ghosts.filter(g=>g.rarity==='boss');
+  else if(rand<0.06) filtered=ghosts.filter(g=>g.rarity==='legendary');
+  else if(rand<0.18) filtered=ghosts.filter(g=>g.rarity==='epic');
+  else if(rand<0.45) filtered=ghosts.filter(g=>g.rarity==='rare');
+  else filtered=ghosts.filter(g=>g.rarity==='common');
+  if(!filtered.length) filtered=ghosts.filter(g=>g.rarity==='common');
+
+  const g=filtered[Math.floor(Math.random()*filtered.length)];
+  currentGhost=g;
+  maxHp=g.hp; currentHp=g.hp;
+  const timeLimit=g.time||(g.rarity==='boss'?60:g.rarity==='legendary'?45:g.rarity==='epic'?30:g.rarity==='rare'?20:15);
+  timeLeft=timeLimit;
+
+  // 이미지 세팅
+  const img=document.getElementById('ghost-img');
+  img.src=makeGhostSVG(g);
+  const isBoss=g.rarity==='boss';
+  img.className=isBoss?'boss':'';
+  const glowMap={common:'#ff3300',rare:'#4488ff',epic:'#cc44ff',legendary:'#ffaa00',boss:'#ff0000'};
+  const gc=glowMap[g.rarity]||'#ff3300';
+  img.style.filter=`drop-shadow(0 0 ${isBoss?35:20}px ${gc}) drop-shadow(0 0 ${isBoss?60:40}px ${gc}66)`;
+
+  // HP바
+  updateHpBar();
+  document.getElementById('ghost-name-hp').textContent=`${g.name} ${RL[g.rarity]?'['+RL[g.rarity]+']':''}`;
+  document.getElementById('hp-wrap').style.display='block';
+  document.getElementById('time-bar-wrap').style.display='block';
+  document.getElementById('time-bar').style.width='100%';
+  document.getElementById('battle-area').className='active';
+
+  // 위험 플래시
+  const dn=document.getElementById('danger');
+  dn.className='on'; setTimeout(()=>dn.className='',1800);
+  if(navigator.vibrate)navigator.vibrate([150,60,150,60,isBoss?500:200]);
+  setMsg(`⚠️ [${g.name}] 출현!`,RC[g.rarity]||'#ff4444');
+
+  // 타이머 시작
+  startTimer(timeLimit);
+
+  // 아이템 드롭 (랜덤 출현)
+  const rand2=Math.random();
+  let itemToDrop=null;
+  if(g.rarity==='boss') itemToDrop=items.filter(i=>i.isUpgMat&&i.matGrade>=3)[Math.floor(Math.random()*2)];
+  else if(g.rarity==='legendary'&&rand2<0.6) itemToDrop=items.filter(i=>i.isUpgMat&&i.matGrade>=3)[0];
+  else if(g.rarity==='epic'&&rand2<0.5) itemToDrop=items.filter(i=>i.isUpgMat&&i.matGrade>=2)[Math.floor(Math.random()*2)];
+  else if(g.rarity==='rare'&&rand2<0.4) itemToDrop=items.filter(i=>i.isUpgMat&&i.matGrade===1)[0];
+  else if(rand2<0.25) itemToDrop=items.filter(i=>i.isUpgMat&&i.matGrade===1)[Math.floor(Math.random()*2)];
+  currentGhost._dropItem=itemToDrop||null;
+}
+
+// ════════════════════════════════════════
+//  타이머
+// ════════════════════════════════════════
+function startTimer(total){
+  clearInterval(timeTimer);
+  timeTimer=setInterval(()=>{
+    timeLeft-=0.1;
+    const pct=Math.max(0,timeLeft/total*100);
+    const tb=document.getElementById('time-bar');
+    tb.style.width=pct+'%';
+    tb.style.background=pct>50?'linear-gradient(90deg,#ff8800,#ffcc00)':pct>25?'linear-gradient(90deg,#ff4400,#ff8800)':'linear-gradient(90deg,#ff0000,#ff4400)';
+    if(timeLeft<=0){
+      clearInterval(timeTimer);
+      failBattle();
     }
+  },100);
 }
 
-// 저장
-function save() {
-    localStorage.setItem('shinbi_money', player.money);
+// ════════════════════════════════════════
+//  공격 처리
+// ════════════════════════════════════════
+function handleHit(e){
+  e.preventDefault();
+  if(!appeared||!currentGhost)return;
+  const atk=getPlayerAtk();
+  const dmg=Math.floor(atk*(0.85+Math.random()*0.3));
+  currentHp=Math.max(0,currentHp-dmg);
+  updateHpBar();
+
+  // 대미지 숫자
+  const touch=e.touches?e.touches[0]:e;
+  showDmgNum(touch.clientX,touch.clientY,dmg,currentGhost.rarity==='boss');
+
+  // 히트 효과
+  const img=document.getElementById('ghost-img');
+  img.classList.remove('hit'); void img.offsetWidth; img.classList.add('hit');
+  setTimeout(()=>img.classList.remove('hit'),200);
+  if(navigator.vibrate)navigator.vibrate(15);
+
+  // 콤보
+  combo++;
+  clearTimeout(comboTimer);
+  comboTimer=setTimeout(()=>{combo=0;document.getElementById('combo-display').className='';},2000);
+  if(combo>1){
+    const cd=document.getElementById('combo-display');
+    document.getElementById('combo-num').textContent=combo+'x';
+    cd.className='show';
+    if(combo>save.maxCombo){save.maxCombo=combo;}
+    checkAchiev('combo',combo);
+  }
+
+  if(currentHp<=0) winBattle();
 }
 
-// 시작
-window.onload = () => {
-    startCamera();
-    if(localStorage.getItem('shinbi_money')) {
-        player.money = Number(localStorage.getItem('shinbi_money'));
+function showDmgNum(x,y,dmg,isBoss){
+  const el=document.createElement('div');
+  el.className='dmg-num';
+  el.textContent='-'+dmg;
+  el.style.left=(x-20)+'px';
+  el.style.top=(y-20)+'px';
+  if(isBoss){el.style.fontSize='28px';el.style.color='#ff8800';}
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),750);
+}
+
+function updateHpBar(){
+  const pct=Math.max(0,currentHp/maxHp*100);
+  document.getElementById('hp-bar').style.width=pct+'%';
+  document.getElementById('hp-bar').style.background=pct>50?'linear-gradient(90deg,#ff0000,#ff5500)':pct>25?'linear-gradient(90deg,#ff4400,#ff8800)':'linear-gradient(90deg,#ff8800,#ffcc00)';
+  document.getElementById('hp-text').textContent=`${currentHp} / ${maxHp}`;
+}
+
+// ════════════════════════════════════════
+//  전투 결과
+// ════════════════════════════════════════
+function winBattle(){
+  clearInterval(timeTimer);
+  const g=currentGhost;
+  const comboBonus=Math.floor(combo*0.5);
+  const earnedExp=g.exp+comboBonus;
+  const earnedGold=g.gold+Math.floor(combo*g.gold*0.1);
+
+  // 셔터
+  const sht=document.getElementById('shutter');
+  sht.classList.add('flash');setTimeout(()=>sht.classList.remove('flash'),500);
+
+  // 보상 지급
+  save.gold+=earnedGold;
+  save.totalGoldEarned+=earnedGold;
+  save.totalCatch++;
+  sessionScore=earnedGold*10+earnedExp*5;
+
+  // 도감 등록
+  if(!save.collected.includes(g.id)) save.collected.push(g.id);
+
+  // 아이템 드롭
+  let dropMsg='';
+  if(g._dropItem){
+    save.inventory[g._dropItem.id]=(save.inventory[g._dropItem.id]||0)+1;
+    if(!save.collectedItems.includes(g._dropItem.id)) save.collectedItems.push(g._dropItem.id);
+    dropMsg=`\n🎁 ${g._dropItem.icon} ${g._dropItem.name} 획득!`;
+  }
+
+  // 스코어 저장
+  save.scores.push({name:g.name,score:sessionScore,date:new Date().toLocaleDateString()});
+  save.scores.sort((a,b)=>b.score-a.score);
+  if(save.scores.length>20)save.scores=save.scores.slice(0,20);
+
+  // 업적 체크
+  checkAchiev('catch',1);
+  checkAchiev('catchTotal',save.totalCatch);
+  checkAchiev('collect',save.collected.length);
+  checkAchiev('goldTotal',save.totalGoldEarned);
+  if(g.rarity==='legendary')checkAchiev('legendary',1);
+  if(g.rarity==='boss')checkAchiev('boss',1);
+  if(g.rarity==='epic')checkAchiev('epic',1);
+  if(isSpecialRandom)checkAchiev('special',1);
+
+  // 경험치
+  addExp(earnedExp);
+  saveSave();
+  updateHUD();
+
+  // 결과 화면
+  endBattleUI();
+  confetti({particleCount:100,spread:70,origin:{y:0.6},colors:['#ff1a1a','#ff6600','#ffd700','#fff']});
+
+  const ro=document.getElementById('result-overlay');
+  ro.className='success';
+  document.getElementById('result-title').textContent='🎉 포획 성공!';
+  document.getElementById('result-title').style.color='#ffd700';
+  document.getElementById('result-detail').innerHTML=
+    `<b style="color:#fff">${g.name}</b> [${RL[g.rarity]}]<br>`+
+    `💰 +${earnedGold}G &nbsp; ⭐ +${earnedExp} EXP<br>`+
+    `🔥 콤보 보너스: +${comboBonus} EXP${dropMsg}`;
+  ro.style.display='flex';
+}
+
+function failBattle(){
+  endBattleUI();
+  if(navigator.vibrate)navigator.vibrate([300,100,300]);
+  const ro=document.getElementById('result-overlay');
+  ro.className='fail';
+  document.getElementById('result-title').textContent='💀 실패!';
+  document.getElementById('result-title').style.color='#ff4444';
+  document.getElementById('result-detail').innerHTML=
+    `<b style="color:#ff8888">${currentGhost.name}</b>을 놓쳤다...<br>시간이 초과되었습니다.<br><br>더 빠르게 공격하세요!`;
+  ro.style.display='flex';
+  setMsg('실패...','#ff4444');
+}
+
+function endBattleUI(){
+  document.getElementById('battle-area').className='';
+  document.getElementById('hp-wrap').style.display='none';
+  document.getElementById('time-bar-wrap').style.display='none';
+  combo=0;
+  document.getElementById('combo-display').className='';
+}
+
+function closeResult(){
+  document.getElementById('result-overlay').style.display='none';
+  appeared=false;
+  currentGhost=null;
+  setMsg('📡 주변을 탐색하세요!','#fff');
+}
+
+// ════════════════════════════════════════
+//  경험치/레벨
+// ════════════════════════════════════════
+function addExp(amount){
+  save.exp+=amount;
+  let lv=save.lv;
+  while(lv<LEVELS.length&&save.exp>=LEVELS[lv-1].exp){
+    save.exp-=LEVELS[lv-1].exp;
+    lv++;
+    showLevelUp(lv);
+  }
+  save.lv=lv;
+  checkAchiev('level',save.lv);
+}
+
+function showLevelUp(lv){
+  const info=LEVELS[lv-1]||LEVELS[LEVELS.length-1];
+  const el=document.getElementById('levelup-overlay');
+  document.getElementById('lu-lv').textContent='Lv.'+lv;
+  document.getElementById('lu-title').textContent=info.title;
+  document.getElementById('lu-sub').textContent='공격력 +15% 증가!';
+  el.className='show';
+  confetti({particleCount:150,spread:100,origin:{y:0.5},colors:['#ffd700','#ffaa00','#ff8800','#fff']});
+  setTimeout(()=>el.className='',3000);
+}
+
+// ════════════════════════════════════════
+//  업적
+// ════════════════════════════════════════
+function checkAchiev(type,value){
+  ACHIEVS.forEach(a=>{
+    if(save.achievDone.includes(a.id))return;
+    if(a.type!==type)return;
+    const cur=(save.achievs[a.id]||0);
+    const next=type==='catchTotal'||type==='goldTotal'||type==='collect'?value:cur+1;
+    save.achievs[a.id]=Math.max(cur,type==='combo'?value:next);
+    if(save.achievs[a.id]>=a.goal){
+      save.achievDone.push(a.id);
+      // 보상
+      if(a.reward.gold) save.gold+=a.reward.gold;
+      if(a.reward.item){
+        save.inventory[a.reward.item]=(save.inventory[a.reward.item]||0)+1;
+        if(!save.collectedItems.includes(a.reward.item)) save.collectedItems.push(a.reward.item);
+      }
+      showAchievPopup(a);
+      saveSave();
+      updateHUD();
     }
-    document.getElementById('moneytxt').textContent = player.money;
-    
-    // 자동 출현 루프
-    setInterval(autoSpawn, 4500);
-};
+  });
+}
+
+function showAchievPopup(a){
+  const p=document.getElementById('achiev-popup');
+  document.getElementById('ap-icon').textContent=a.icon;
+  document.getElementById('ap-name').textContent=a.name;
+  document.getElementById('ap-reward').textContent=`보상: ${a.reward.gold?'💰'+a.reward.gold+'G':''}${a.reward.item?' '+items.find(i=>i.id===a.reward.item)?.icon:''}`;
+  p.className='show';
+  setTimeout(()=>p.className='',3500);
+}
+
+// ════════════════════════════════════════
+//  HUD 업데이트
+// ════════════════════════════════════════
+function updateHUD(){
+  const lv=save.lv;
+  const info=LEVELS[Math.min(lv-1,LEVELS.length-1)];
+  const nextInfo=LEVELS[Math.min(lv,LEVELS.length-1)];
+  document.getElementById('lv-num').textContent=lv;
+  document.getElementById('title-box').textContent=(info?info.title:'전설의 헌터');
+  document.getElementById('gold-box').textContent='💰 '+save.gold.toLocaleString()+'G';
+  document.getElementById('atk-display').textContent=getPlayerAtk();
+  const maxExp=info?info.exp:9999;
+  const pct=Math.min(100,save.exp/maxExp*100);
+  document.getElementById('exp-bar').style.width=pct+'%';
+  document.getElementById('exp-num').textContent=save.exp;
+  document.getElementById('exp-max').textContent=maxExp;
+}
+
+// ════════════════════════════════════════
+//  상점
+// ════════════════════════════════════════
+function renderShop(){
+  const list=document.getElementById('shop-list');
+  list.innerHTML='';
+  WEAPONS.forEach(w=>{
+    const owned=!!save.weapons[w.id];
+    const equipped=save.equippedWeapon===w.id;
+    const canBuy=!owned&&save.gold>=w.price;
+    const lv=getWeaponLv(w.id);
+    const atk=getWeaponAtk(w.id);
+    const div=document.createElement('div');
+    div.className='shop-item'+(equipped?' equipped':owned?' owned':'');
+    div.innerHTML=`
+      <div class="shop-icon">${w.icon}</div>
+      <div class="shop-info">
+        <div class="shop-name">${w.name}${lv>1?' +'+lv:''}</div>
+        <div class="shop-desc">${w.desc}</div>
+        <div class="shop-atk">⚔️ 공격력 ${atk}</div>
+      </div>
+      ${w.price===0?'<button class="shop-btn equipped-lbl" disabled>기본</button>':
+        equipped?'<button class="shop-btn equipped-lbl" disabled>장착중</button>':
+        owned?`<button class="shop-btn equip" onclick="equipWeapon('${w.id}')">장착</button>`:
+        `<button class="shop-btn buy ${canBuy?'':'disabled'}" onclick="buyWeapon('${w.id}')" ${canBuy?'':'disabled'}>💰${w.price.toLocaleString()}G</button>`}`;
+    list.appendChild(div);
+  });
+}
+
+function buyWeapon(wid){
+  const w=WEAPONS.find(x=>x.id===wid);
+  if(!w||save.gold<w.price)return showToast('골드가 부족합니다!');
+  save.gold-=w.price;
+  save.weapons[wid]={lv:1};
+  save.equippedWeapon=wid;
+  checkAchiev('buy',1);
+  saveSave(); updateHUD(); renderShop();
+  showToast(`${w.icon} ${w.name} 구매 완료!`);
+}
+
+function equipWeapon(wid){
+  save.equippedWeapon=wid;
+  saveSave(); updateHUD(); renderShop();
+  const w=WEAPONS.find(x=>x.id===wid);
+  showToast(`${w.icon} ${w.name} 장착!`);
+}
+
+// ════════════════════════════════════════
+//  강화
+// ════════════════════════════════════════
+function renderUpgrade(){
+  const list=document.getElementById('upgrade-list');
+  list.innerHTML='';
+  WEAPONS.filter(w=>save.weapons[w.id]&&w.upgReq).forEach(w=>{
+    const lv=getWeaponLv(w.id);
+    const atk=getWeaponAtk(w.id);
+    const nextAtk=Math.floor(w.atk*(1+0.15*lv));
+    // 재료 충족 체크
+    const canUpgrade=w.upgReq.every(r=>(save.inventory[r.id]||0)>=r.cnt*(lv));
+    const div=document.createElement('div');
+    div.className='upgrade-card';
+    const matHtml=w.upgReq.map(r=>{
+      const need=r.cnt*lv;
+      const have=save.inventory[r.id]||0;
+      const it=items.find(i=>i.id===r.id);
+      const ok=have>=need;
+      return `<div class="mat-item ${ok?'ok':'ng'}">${it?it.icon:'?'} ${it?it.name:'?'} ${have}/${need}</div>`;
+    }).join('');
+    div.innerHTML=`
+      <div class="upgrade-header">
+        <div class="upgrade-icon">${w.icon}</div>
+        <div>
+          <div class="upgrade-name">${w.name}</div>
+          <div class="upgrade-lv">현재 Lv.${lv} → Lv.${lv+1}</div>
+          <div class="upgrade-atk">⚔️ ${atk} → ${nextAtk}</div>
+        </div>
+      </div>
+      <div class="mat-list">${matHtml}</div>
+      <button class="upg-btn" ${canUpgrade?'':'disabled'} onclick="upgradeWeapon('${w.id}')">
+        ${canUpgrade?'🔨 강화하기':'재료 부족'}
+      </button>`;
+    list.appendChild(div);
+  });
+  if(!list.children.length)list.innerHTML='<div style="color:rgba(255,255,255,0.4);text-align:center;padding:30px">보유한 무기가 없습니다</div>';
+}
+
+function upgradeWeapon(wid){
+  const w=WEAPONS.find(x=>x.id===wid);
+  const lv=getWeaponLv(wid);
+  // 재료 소비
+  w.upgReq.forEach(r=>{
+    save.inventory[r.id]=(save.inventory[r.id]||0)-r.cnt*lv;
+    if(save.inventory[r.id]<0)save.inventory[r.id]=0;
+  });
+  save.weapons[wid].lv=lv+1;
+  checkAchiev('upgrade',1);
+  saveSave(); updateHUD(); renderUpgrade();
+  showToast(`🔨 ${w.icon} ${w.name} +${lv+1} 강화 성공!`);
+}
+
+// ════════════════════════════════════════
+//  인벤토리
+// ════════════════════════════════════════
+function renderInv(){
+  const grid=document.getElementById('inv-grid');
+  grid.innerHTML='';
+  const matItems=items.filter(i=>i.isUpgMat);
+  matItems.forEach(it=>{
+    const cnt=save.inventory[it.id]||0;
+    const div=document.createElement('div');
+    div.className='inv-slot';
+    div.innerHTML=`<div class="inv-icon">${it.icon}</div><div class="inv-name">${it.name}</div><div class="inv-cnt">${cnt}</div>`;
+    grid.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════════
+//  도감
+// ════════════════════════════════════════
+let currentTab='g';
+function switchTab(t){
+  currentTab=t;
+  document.getElementById('tg').className=t==='g'?'tab on':'tab';
+  document.getElementById('ti').className=t==='i'?'tab on':'tab';
+  renderGrid();
+}
+function renderGrid(){
+  const data=currentTab==='g'?ghosts:items;
+  const collected=currentTab==='g'?save.collected:save.collectedItems;
+  const got=data.filter(d=>collected.includes(d.id)).length;
+  document.getElementById('pf').style.width=(got/data.length*100)+'%';
+  const grid=document.getElementById('grid');grid.innerHTML='';
+  data.forEach(d=>{
+    const has=collected.includes(d.id);
+    const div=document.createElement('div');
+    div.className='slot '+(has?'got':'nope');
+    const rc=RC[d.rarity||d.rare]||'#aaa';
+    if(d.rarity||d.rare)div.style.borderColor=has?(rc+'55'):'rgba(255,255,255,0.07)';
+    if(has){
+      const frame=document.createElement('div');frame.className='pframe';
+      if(currentTab==='g'){
+        const img=document.createElement('img');img.src=makeGhostSVG(d);
+        img.style.cssText='width:100%;height:100%;object-fit:contain;';
+        frame.appendChild(img);
+      } else {
+        frame.innerHTML=`<div style="font-size:28px;display:flex;align-items:center;justify-content:center;height:100%;padding-bottom:10px">${d.icon||'?'}</div>`;
+      }
+      div.appendChild(frame);
+      const nm=document.createElement('div');nm.className='sname';nm.textContent=d.name;div.appendChild(nm);
+      const rl=document.createElement('div');rl.className='rlab';rl.style.color=rc;
+      rl.textContent='★ '+(RL[d.rarity||d.rare]||'');div.appendChild(rl);
+    } else {
+      div.innerHTML='<div class="lock">🔒</div><div class="sname">???</div>';
+    }
+    grid.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════════
+//  업적
+// ════════════════════════════════════════
+function renderAchiev(){
+  const list=document.getElementById('achiev-list');list.innerHTML='';
+  ACHIEVS.forEach(a=>{
+    const done=save.achievDone.includes(a.id);
+    const prog=save.achievs[a.id]||0;
+    const div=document.createElement('div');
+    div.className='achiev-item'+(done?' done':'');
+    const rewardTxt=a.reward.gold?`💰${a.reward.gold}G`:'';
+    const itemR=a.reward.item?items.find(i=>i.id===a.reward.item):null;
+    div.innerHTML=`
+      <div class="achiev-icon">${a.icon}</div>
+      <div class="achiev-info">
+        <div class="achiev-name">${done?'✅ ':''} ${a.name}</div>
+        <div class="achiev-desc">${a.desc}</div>
+        <div class="achiev-prog">${done?'완료!':prog+' / '+a.goal}</div>
+      </div>
+      <div class="achiev-reward">${rewardTxt}${itemR?' '+itemR.icon:''}</div>`;
+    list.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════════
+//  유틸
+// ════════════════════════════════════════
+function openScreen(id){document.getElementById(id).className='screen show';}
+function closeScreen(id){document.getElementById(id).className='screen';}
+function setMsg(t,c='#fff'){const el=document.getElementById('msgtxt');el.textContent=t;el.style.color=c;}
+function showToast(msg){
+  const el=document.getElementById('toast');
+  document.getElementById('toast-inner').textContent=msg;
+  el.className='show';setTimeout(()=>el.className='',2200);
+}
+function manualScan(){if(appeared)return;radarV=96;setMsg('🔦 탐색 중...','#0f0');if(navigator.vibrate)navigator.vibrate(50);}
+
+window.onload=start;
 </script>
 </body>
 </html>
