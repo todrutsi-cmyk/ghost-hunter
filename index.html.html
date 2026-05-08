@@ -4,84 +4,132 @@
 <meta charset="UTF-8">
 <title>신비아파트: 고스트 헌터</title>
 <style>
-    body{margin:0;padding:0;background:#000;color:white;font-family:'Black Han Sans',sans-serif;overflow:hidden;height:100vh;}
-    #v{width:100%;height:100%;object-fit:cover;position:fixed;top:0;left:0;z-index:1;}
-    #fakebg{width:100%;height:100%;position:fixed;top:0;left:0;background:radial-gradient(#220033,#000);z-index:1;display:none;}
-    #tw{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);display:none;flex-direction:column;align-items:center;z-index:10;}
-    #ghost-img{width:260px;height:260px;object-fit:contain;cursor:pointer;}
-    button{padding:12px 30px;margin:10px;font-size:18px;border-radius:30px;background:#c00;color:white;border:none;}
-    #hud{position:fixed;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;z-index:5;}
-    .menu{position:fixed;bottom:15px;left:0;right:0;display:flex;justify-content:center;gap:10px;z-index:20;}
+    body{margin:0;padding:0;background:#000;overflow:hidden;height:100vh;font-family:'Black Han Sans',sans-serif;}
+    #v{position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1;}
+    #fakebg{position:fixed;inset:0;background:radial-gradient(#1a0033,#000);z-index:1;display:none;}
+    #scanline{position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 4px,rgba(0,255,80,0.1) 4px,rgba(0,255,80,0.1) 5px);z-index:2;}
+    
+    #tw{position:fixed;top:50%;left:50%;transform:translate(-50%,-55%);display:none;flex-direction:column;align-items:center;z-index:10;}
+    #ghost-img{width:260px;height:260px;object-fit:contain;cursor:pointer;box-shadow:0 0 50px #ff0000;border-radius:15px;}
+    
+    #hpbar{width:300px;height:22px;background:#111;border:3px solid #ff0000;border-radius:12px;overflow:hidden;margin:10px 0;}
+    #hpfill{height:100%;background:linear-gradient(#ff0000,#ffaa00);width:100%;}
+    
+    button{padding:12px 28px;margin:8px;font-size:17px;border-radius:30px;}
+    .attack{background:linear-gradient(#ff2222,#bb0000);color:white;border:2px solid #ff5555;}
 </style>
 </head>
 <body>
 
 <video id="v" autoplay playsinline muted loop></video>
 <div id="fakebg"></div>
+<div id="scanline"></div>
 
-<div id="hud">
-    <div>💰 <span id="money">1250</span></div>
-    <div id="det">탐색 중...</div>
+<div id="hud" style="position:fixed;top:10px;left:10px;right:10px;color:#0f0;z-index:5;display:flex;justify-content:space-between;">
+    <div id="det">👁 후면 카메라 연결중...</div>
+    <div>💰 <span id="moneytxt">800</span></div>
 </div>
 
 <div id="tw">
-    <img id="ghost-img" src="https://i.imgur.com/KfR8vX2.jpeg">
-    <div style="margin:15px 0;color:#ff0;font-size:20px;" id="name">진명</div>
-    <button onclick="attack()">🔥 공격하기</button>
-    <button onclick="hideGhost()">도망</button>
-</div>
-
-<div class="menu">
-    <button onclick="showBook()">📖 도감</button>
-    <button onclick="showInv()">🎒 가방</button>
-    <button onclick="trigger()">👻 귀신 소환</button>
+    <img id="ghost-img" src="">
+    <div id="gtag" style="color:#ff0;font-size:23px;margin:12px 0;"></div>
+    <div id="hpbar"><div id="hpfill"></div></div>
+    <button class="attack" onclick="attack()">🔥 공격!</button>
 </div>
 
 <script>
-// 카메라
-async function startCam() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({video: true});
-    document.getElementById('v').srcObject = stream;
-  } catch(e) {
-    document.getElementById('v').style.display = 'none';
-    document.getElementById('fakebg').style.display = 'block';
-  }
+// ==================== 플레이어 데이터 ====================
+let player = { money: 800, weaponDmg: 12 };
+let currentGhost = null;
+let currentHP = 0;
+let maxHP = 0;
+
+// ==================== 후면 카메라 강제 ====================
+async function startCamera() {
+    try {
+        // 후면 강제
+        let stream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+                facingMode: { exact: "environment" },
+                width: {ideal: 1280},
+                height: {ideal: 720}
+            }
+        });
+        document.getElementById('v').srcObject = stream;
+        document.getElementById('det').textContent = "👁 후면 카메라 ON";
+    } catch(e) {
+        try {
+            // 실패하면 일반 후면 시도
+            let stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}});
+            document.getElementById('v').srcObject = stream;
+        } catch(err) {
+            document.getElementById('v').style.display = 'none';
+            document.getElementById('fakebg').style.display = 'block';
+            document.getElementById('det').textContent = "📱 카메라 OFF";
+        }
+    }
 }
 
-let money = 1250;
-let currentHP = 40;
+// ==================== 귀신 데이터 ====================
+const ghosts = [
+    {name:"어둑시니", hp:28, img:"https://i.imgur.com/0zK8vLq.jpeg"},
+    {name:"불가살이", hp:45, img:"https://i.imgur.com/2vX9pLm.jpeg"},
+    {name:"망부화", hp:33, img:"https://i.imgur.com/XkL9mNp.jpeg"},
+    {name:"진명", hp:68, img:"https://i.imgur.com/KfR8vX2.jpeg"},
+    {name:"마고할망", hp:40, img:"https://i.imgur.com/JdR7vPq.jpeg"}
+];
 
-function trigger() {
-  document.getElementById('tw').style.display = 'flex';
-  currentHP = 40;
-  document.getElementById('name').textContent = "귀신 출현!";
+// 자동 출현
+function autoSpawn() {
+    if(currentGhost || Math.random() > 0.35) return;
+    
+    currentGhost = ghosts[Math.floor(Math.random()*ghosts.length)];
+    maxHP = currentHP = currentGhost.hp;
+    
+    document.getElementById('ghost-img').src = currentGhost.img;
+    document.getElementById('gtag').textContent = currentGhost.name + " 출현!";
+    document.getElementById('tw').style.display = 'flex';
+    updateHP();
+}
+
+function updateHP() {
+    document.getElementById('hpfill').style.width = (currentHP / maxHP * 100) + '%';
 }
 
 function attack() {
-  currentHP -= 8;
-  const img = document.getElementById('ghost-img');
-  img.style.transform = 'scale(0.8)';
-  setTimeout(() => img.style.transform = 'scale(1)', 150);
-  
-  if(currentHP <= 0) {
-    alert("🎉 귀신 잡음! +450원");
-    money += 450;
-    document.getElementById('money').textContent = money;
-    hideGhost();
-  }
+    if(!currentGhost) return;
+    currentHP -= player.weaponDmg;
+    updateHP();
+    
+    const img = document.getElementById('ghost-img');
+    img.style.transform = 'scale(0.82)';
+    setTimeout(() => img.style.transform = 'scale(1)', 120);
+    
+    if(currentHP <= 0) {
+        const reward = Math.floor(currentGhost.hp * 18) + 120;
+        player.money += reward;
+        document.getElementById('moneytxt').textContent = player.money;
+        alert(`✅ ${currentGhost.name} 포획 성공!\n💰 ${reward}원 획득`);
+        document.getElementById('tw').style.display = 'none';
+        currentGhost = null;
+    }
 }
 
-function hideGhost() {
-  document.getElementById('tw').style.display = 'none';
+// 저장
+function save() {
+    localStorage.setItem('shinbi_money', player.money);
 }
 
-function showBook() { alert("📖 도감\n(나중에 더 추가할게)"); }
-function showInv() { alert("🎒 인벤토리\n강화 재료: 3개"); }
-
+// 시작
 window.onload = () => {
-  startCam();
-  document.getElementById('money').textContent = money;
+    startCamera();
+    if(localStorage.getItem('shinbi_money')) {
+        player.money = Number(localStorage.getItem('shinbi_money'));
+    }
+    document.getElementById('moneytxt').textContent = player.money;
+    
+    // 자동 출현 루프
+    setInterval(autoSpawn, 4500);
 };
 </script>
 </body>
