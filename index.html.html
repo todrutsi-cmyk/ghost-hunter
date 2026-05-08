@@ -218,7 +218,7 @@ body,html{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Bl
 <body>
 
 <div id="fakebg"></div>
-<video id="v" autoplay playsinline muted></video>
+<video id="v" autoplay playsinline webkit-playsinline muted></video>
 <div id="scanline"></div>
 <div id="radar"><div id="radar-fill"></div></div>
 
@@ -970,12 +970,32 @@ function getPlayerAtk(){return getWeaponAtk(save.equippedWeapon);}
 // ════════════════════════════════════════
 async function start(){
   const video=document.getElementById('v');
-  try{
-    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
-    video.srcObject=stream;
-    await video.play();
-    document.getElementById('det').textContent='👁 탐지중...';
-  }catch(e){
+
+  // 후면 exact → 후면 ideal → 기본 순서로 시도
+  const constraints=[
+    {video:{facingMode:{exact:'environment'},width:{ideal:1280},height:{ideal:720}}},
+    {video:{facingMode:'environment'}},
+    {video:{facingMode:{ideal:'environment'}}},
+    {video:true},
+  ];
+
+  let started=false;
+  for(const c of constraints){
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia(c);
+      video.srcObject=stream;
+      video.setAttribute('playsinline','true');
+      video.setAttribute('webkit-playsinline','true');
+      video.muted=true;
+      const p=video.play();
+      if(p!==undefined) await p.catch(()=>{});
+      document.getElementById('det').textContent='👁 탐지중...';
+      started=true;
+      break;
+    }catch(e){console.warn('cam fail:',e.name,e.message);}
+  }
+
+  if(!started){
     video.style.display='none';
     document.getElementById('fakebg').style.display='block';
     document.getElementById('det').textContent='⚠ 카메라 없음';
