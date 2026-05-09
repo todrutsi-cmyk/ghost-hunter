@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>신비아파트 고스트헌터 AR</title>
+<title>고스트헌터 AR</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
 body{background:#000;font-family:'Segoe UI',sans-serif;overflow:hidden;touch-action:none;}
@@ -33,11 +33,11 @@ body{background:#000;font-family:'Segoe UI',sans-serif;overflow:hidden;touch-act
 .ghost-sprite{position:fixed;z-index:5;pointer-events:auto;cursor:crosshair;display:flex;flex-direction:column;align-items:center;}
 .ghost-img-wrap{position:relative;animation:gFloat 3s ease-in-out infinite;}
 @keyframes gFloat{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-18px) rotate(1deg)}}
-.ghost-img{width:140px;height:140px;object-fit:contain;filter:drop-shadow(0 0 12px rgba(200,0,0,.7)) drop-shadow(0 0 25px rgba(150,0,50,.4));}
-.boss-sprite .ghost-img{width:200px;height:200px;}
-.ghost-hp-bar{width:120px;height:8px;background:rgba(0,0,0,.6);border-radius:5px;margin-top:4px;overflow:hidden;border:1px solid rgba(255,50,50,.3);}
+.ghost-img{width:420px;height:420px;object-fit:contain;filter:drop-shadow(0 0 12px rgba(200,0,0,.7)) drop-shadow(0 0 25px rgba(150,0,50,.4));}
+.boss-sprite .ghost-img{width:580px;height:580px;}
+.ghost-hp-bar{width:360px;height:10px;background:rgba(0,0,0,.6);border-radius:5px;margin-top:4px;overflow:hidden;border:1px solid rgba(255,50,50,.3);}
 .ghost-hp-fill{height:100%;background:linear-gradient(90deg,#8b0000,#ff0000);border-radius:5px;transition:width .12s;}
-.ghost-name{color:#ffaaaa;font-size:10px;font-weight:700;text-shadow:0 0 6px #f00;margin-top:2px;letter-spacing:1px;background:rgba(0,0,0,.5);padding:2px 8px;border-radius:10px;}
+.ghost-name{color:#ffaaaa;font-size:14px;font-weight:700;text-shadow:0 0 6px #f00;margin-top:2px;letter-spacing:1px;background:rgba(0,0,0,.5);padding:2px 8px;border-radius:10px;}
 .ghost-hit .ghost-img{animation:hFlash .18s;}
 @keyframes hFlash{0%,100%{filter:drop-shadow(0 0 12px rgba(200,0,0,.7))}50%{filter:brightness(4) drop-shadow(0 0 25px #fff)}}
 @keyframes ghostAppear{from{opacity:0;transform:scale(.3) translateY(40px)}to{opacity:1;transform:scale(1) translateY(0)}}
@@ -171,14 +171,43 @@ body{background:#000;font-family:'Segoe UI',sans-serif;overflow:hidden;touch-act
   <div class="bar-btn" onclick="openUpgrade()"><span class="bbi">⚒️</span>강화</div>
   <div class="bar-btn" onclick="openDex()"><span class="bbi">📖</span>도감</div>
   <div class="bar-btn" onclick="openAch()"><span class="bbi">🏆</span>업적</div>
+  <div class="bar-btn" onclick="openOptions()"><span class="bbi">⚙️</span>옵션</div>
 </div>
 
 <div class="screen" id="startScreen">
   <div id="startGhost">👻</div>
-  <h1>신비아파트<br>고스트헌터 AR</h1>
+  <h1>고스트헌터 AR</h1>
   <p style="color:#c88;font-size:13px;margin:6px 0 28px;">주변을 둘러보며 귀신을 찾아라</p>
   <button class="btn" onclick="startGame()">☠️ 사냥 시작</button>
   <button class="btn gold" onclick="loadGame()">💾 이어하기</button>
+</div>
+
+
+<div class="modal" id="optModal">
+  <span class="modal-close" onclick="closeM('optModal')">✕</span>
+  <div class="modal-title">⚙️ 옵션</div>
+  <div style="width:100%;max-width:420px;padding:0 16px;">
+    <div style="background:rgba(15,5,5,.95);border:1px solid rgba(180,60,60,.35);border-radius:14px;padding:20px;margin:8px 0;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div>
+          <div style="color:#f8c8c8;font-size:15px;font-weight:700;">📳 진동</div>
+          <div style="color:#a08080;font-size:11px;margin-top:3px;">귀신 출현 및 타격 시 진동</div>
+        </div>
+        <div id="vibToggle" onclick="toggleVib()" style="width:54px;height:28px;border-radius:14px;background:#aa0000;cursor:pointer;position:relative;transition:background .3s;">
+          <div id="vibKnob" style="position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .3s;"></div>
+        </div>
+      </div>
+      <div style="border-top:1px solid rgba(180,60,60,.2);padding-top:16px;">
+        <div style="color:#f8c8c8;font-size:13px;font-weight:700;margin-bottom:4px;">버전</div>
+        <div style="color:#a08080;font-size:11px;">고스트헌터 AR v2.0</div>
+        <div style="color:#a08080;font-size:11px;margin-top:2px;">귀신 52종 수록</div>
+      </div>
+      <div style="border-top:1px solid rgba(180,60,60,.2);padding-top:16px;margin-top:16px;">
+        <div style="color:#f8c8c8;font-size:13px;font-weight:700;margin-bottom:8px;">데이터 초기화</div>
+        <button class="btn" style="width:100%;background:linear-gradient(135deg,#3a0000,#660000);font-size:13px;padding:10px;" onclick="resetData()">🗑️ 저장 데이터 초기화</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="modal" id="shopModal">
@@ -417,7 +446,7 @@ function mkGhost(gd){
   el.appendChild(wrap);el.appendChild(nm);el.appendChild(bar);
   $('touchLayer').appendChild(el);
   obj.el=el;obj.hpF=fill;obj.imgEl=img;obj.wrap=wrap;
-  if(navigator.vibrate)navigator.vibrate([200,100,200]);
+  doVib([200,100,200]);
   obj.timer=setTimeout(()=>ghostEsc(obj),gd.isBoss?90000:20000+Math.random()*15000);
   currentGhost=obj;
   el.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();atk(obj,e.touches[0]);},{passive:false});
@@ -445,7 +474,7 @@ function atk(ghost,ev){
   const dmg=Math.floor((w.dmg+bonus)*buffs.damage*cmult);
   ghost.hp-=dmg;
   ghost.el.classList.remove('ghost-hit');void ghost.el.offsetWidth;ghost.el.classList.add('ghost-hit');
-  if(navigator.vibrate)navigator.vibrate(25);
+  doVib(25);
   const cx=ev.clientX||ev.pageX,cy=ev.clientY||ev.pageY;
   showDmg(cx,cy,dmg);particles(cx,cy);doCombo();
   const p=Math.max(0,ghost.hp/ghost.maxHp*100);
@@ -475,7 +504,7 @@ function killGhost(ghost){
 function ghostEsc(ghost){
   if(!ghost||ghost.hp<=0)return;
   fails++;
-  if(navigator.vibrate)navigator.vibrate([100,50,100,50,300]);
+  doVib([100,50,100,50,300]);
   const em=document.createElement('div');em.className='escape-msg';
   em.textContent='👁 '+ghost.data.name+' 도망!';document.body.appendChild(em);
   setTimeout(()=>em.remove(),2000);
@@ -650,6 +679,44 @@ function notify(msg){
 }
 
 // 비네트 캔버스 없애고 CSS로 대체
+
+let vibEnabled = localStorage.getItem('vibEnabled') !== 'false';
+
+function updateVibUI(){
+  const tog = document.getElementById('vibToggle');
+  const knob = document.getElementById('vibKnob');
+  if(!tog || !knob) return;
+  tog.style.background = vibEnabled ? '#aa0000' : '#333';
+  knob.style.left = vibEnabled ? '29px' : '3px';
+}
+
+function toggleVib(){
+  vibEnabled = !vibEnabled;
+  localStorage.setItem('vibEnabled', vibEnabled);
+  updateVibUI();
+  if(vibEnabled && navigator.vibrate) navigator.vibrate(100);
+}
+
+function doVib(pattern){
+  if(vibEnabled && navigator.vibrate) navigator.vibrate(pattern);
+}
+
+function openOptions(){
+  document.getElementById('optModal').classList.add('active');
+  updateVibUI();
+}
+
+function resetData(){
+  if(confirm('정말 초기화하시겠습니까?')){
+    localStorage.removeItem('sngh4');
+    S = dS();
+    kills=0;fails=0;combo=0;
+    updateHUD();updateWHUD();
+    closeM('optModal');
+    notify('🗑️ 데이터 초기화 완료');
+  }
+}
+
 document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 document.addEventListener('contextmenu',e=>e.preventDefault());
 </script>
