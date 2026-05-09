@@ -190,6 +190,15 @@ body{background:#000;font-family:'Segoe UI',sans-serif;overflow:hidden;touch-act
     <div style="background:rgba(15,5,5,.95);border:1px solid rgba(180,60,60,.35);border-radius:14px;padding:20px;margin:8px 0;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
         <div>
+          <div style="color:#f8c8c8;font-size:15px;font-weight:700;">🔊 효과음</div>
+          <div style="color:#a08080;font-size:11px;margin-top:3px;">타격, 처치, 레벨업 효과음</div>
+        </div>
+        <div id="sfxToggle" onclick="toggleSfx()" style="width:54px;height:28px;border-radius:14px;background:#aa0000;cursor:pointer;position:relative;transition:background .3s;">
+          <div id="sfxKnob" style="position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .3s;"></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div>
           <div style="color:#f8c8c8;font-size:15px;font-weight:700;">📳 진동</div>
           <div style="color:#a08080;font-size:11px;margin-top:3px;">귀신 출현 및 타격 시 진동</div>
         </div>
@@ -576,6 +585,7 @@ function mkGhost(gd){
   el.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();atk(obj,e.touches[0]);},{passive:false});
   el.addEventListener('mousedown',e=>{e.preventDefault();atk(obj,e);});
   notify('👁 '+gd.name+' 출현!');
+  sfxGhostAppear();
 }
 
 function mkItem(){
@@ -598,6 +608,7 @@ function atk(ghost,ev){
   const dmg=Math.floor((w.dmg+bonus)*buffs.damage*cmult);
   ghost.hp-=dmg;
   ghost.el.classList.remove('ghost-hit');void ghost.el.offsetWidth;ghost.el.classList.add('ghost-hit');
+  sfxHit();
   doVib(25);
   const cx=ev.clientX||ev.pageX,cy=ev.clientY||ev.pageY;
   showDmg(cx,cy,dmg);particles(cx,cy);doCombo();
@@ -620,6 +631,7 @@ function killGhost(ghost){
     const mk=Object.keys(S.materials)[Math.floor(Math.random()*6)];
     S.materials[mk]++;notify('📦 '+MATS.find(m=>m.id===mk).name+' 획득!');
   }
+  sfxKill();
   if(ghost.wrap)ghost.wrap.style.animation='ghostFlee .8s forwards';
   setTimeout(()=>{rmGEl(ghost);currentGhost=null;},800);
   polaroid(g,gamt,g.exp||20);checkLvl();checkAch();updateHUD();save();
@@ -629,6 +641,7 @@ function ghostEsc(ghost){
   if(!ghost||ghost.hp<=0)return;
   fails++;
   doVib([100,50,100,50,300]);
+  sfxEscape();
   const em=document.createElement('div');em.className='escape-msg';
   em.textContent='👁 '+ghost.data.name+' 도망!';document.body.appendChild(em);
   setTimeout(()=>em.remove(),2000);
@@ -661,7 +674,7 @@ function collectItem(item){
     case 'aoe':if(currentGhost){currentGhost.hp-=d.value;if(currentGhost.hp<=0)killGhost(currentGhost);}notify('💥 강타!');break;
     case 'revive':fails=Math.max(0,fails-1);notify('🌸 도망 기록 -1!');break;
   }
-  rmI(item);updateHUD();checkAch();save();
+  sfxItem();rmI(item);updateHUD();checkAch();save();
 }
 
 function doCombo(){
@@ -672,6 +685,7 @@ function doCombo(){
     $('comboText').textContent=combo+' COMBO!';
     $('comboSub').textContent='공격력 +'+Math.min(Math.floor(combo*3),90)+'%';
     $('comboDisplay').style.opacity='1';setTimeout(()=>$('comboDisplay').style.opacity='0',1500);
+  sfxCombo(combo);
   }
   updateHUD();
 }
@@ -682,6 +696,7 @@ function checkLvl(){
     S.exp-=expNeeded(S.level);S.level++;
     const t=TITLES.filter(x=>S.level>=x.lv).pop();if(t)S.title=t.t;
     $('lvlTitle').textContent=S.title;
+    sfxLevelUp();
     const el=$('lvlBanner');el.style.opacity='1';setTimeout(()=>el.style.opacity='0',2500);
   }
   updateHUD();
@@ -690,7 +705,7 @@ function checkAch(){
   ACHS.forEach(a=>{
     if(!S.achievements[a.id]&&a.cond(S)){
       S.achievements[a.id]=true;S.achDone=Object.keys(S.achievements).length;
-      S.gold+=a.rg;S.exp+=a.re;notify('🏆 업적: '+a.name+'! +'+a.rg+'G');checkLvl();
+      S.gold+=a.rg;S.exp+=a.re;notify('🏆 업적: '+a.name+'! +'+a.rg+'G');sfxAchieve();checkLvl();
     }
   });
 }
@@ -730,7 +745,7 @@ function polaroid(g,gold,exp){
   $('polReward').textContent='+'+gold+'G · +'+exp+'XP';
   const po=$('polaroidOverlay');po.style.display='flex';setTimeout(()=>po.style.display='none',2200);
 }
-function showBossAlert(){const e=$('bossAlert');e.style.opacity='1';setTimeout(()=>e.style.opacity='0',3000);}
+function showBossAlert(){const e=$('bossAlert');e.style.opacity='1';setTimeout(()=>e.style.opacity='0',3000);sfxBossAppear();}
 function showSpecialEvt(){const e=$('specialEvt');e.style.display='block';setTimeout(()=>e.style.display='none',5000);}
 
 function openShop(){
@@ -832,6 +847,7 @@ function doVib(pattern){
 function openOptions(){
   document.getElementById('optModal').classList.add('active');
   updateVibUI();
+  updateSfxUI();
 }
 
 function resetData(){
@@ -845,6 +861,10 @@ function resetData(){
   }
 }
 
+document.addEventListener('touchstart',()=>{
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume();
+},{once:false});
 document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 document.addEventListener('contextmenu',e=>e.preventDefault());
 </script>
