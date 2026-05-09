@@ -30,12 +30,12 @@ body{background:#000;font-family:'Segoe UI',sans-serif;overflow:hidden;touch-act
 .radar-txt{color:rgba(255,150,150,.8);font-size:11px;margin-top:8px;font-weight:700;}
 
 /* 귀신 스프라이트 */
-.ghost-sprite{position:fixed;z-index:5;pointer-events:auto;cursor:crosshair;display:flex;flex-direction:column;align-items:center;}
+.ghost-sprite{position:fixed;z-index:5;pointer-events:auto;cursor:crosshair;display:flex;flex-direction:column;align-items:center;will-change:transform;transition:none;}
 .ghost-img-wrap{position:relative;animation:gFloat 3s ease-in-out infinite;}
 @keyframes gFloat{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-18px) rotate(1deg)}}
-.ghost-img{width:420px;height:420px;object-fit:contain;filter:drop-shadow(0 0 12px rgba(200,0,0,.7)) drop-shadow(0 0 25px rgba(150,0,50,.4));}
-.boss-sprite .ghost-img{width:580px;height:580px;}
-.ghost-hp-bar{width:360px;height:10px;background:rgba(0,0,0,.6);border-radius:5px;margin-top:4px;overflow:hidden;border:1px solid rgba(255,50,50,.3);}
+.ghost-img{width:210px;height:210px;object-fit:contain;filter:drop-shadow(0 0 12px rgba(200,0,0,.7)) drop-shadow(0 0 25px rgba(150,0,50,.4));}
+.boss-sprite .ghost-img{width:290px;height:290px;}
+.ghost-hp-bar{width:180px;height:9px;background:rgba(0,0,0,.6);border-radius:5px;margin-top:4px;overflow:hidden;border:1px solid rgba(255,50,50,.3);}
 .ghost-hp-fill{height:100%;background:linear-gradient(90deg,#8b0000,#ff0000);border-radius:5px;transition:width .12s;}
 .ghost-name{color:#ffaaaa;font-size:14px;font-weight:700;text-shadow:0 0 6px #f00;margin-top:2px;letter-spacing:1px;background:rgba(0,0,0,.5);padding:2px 8px;border-radius:10px;}
 .ghost-hit .ghost-img{animation:hFlash .18s;}
@@ -147,7 +147,7 @@ body{background:#000;font-family:'Segoe UI',sans-serif;overflow:hidden;touch-act
 <div id="motionHint">
   <span class="hint-icon">📱</span>
   주변을 둘러보세요...<br>
-  <span style="font-size:10px;color:#c88;">귀신이 나타날지도 모릅니다</span>
+  <span style="font-size:10px;color:#c88;">카메라를 돌리면 귀신이 보입니다</span>
 </div>
 <div id="radarHint">
   <div class="radar-ring"></div>
@@ -359,6 +359,15 @@ let combo=0,kills=0,fails=0,motionEnergy=0,spawnCooldown=0;
 let lastAlpha=null,lastBeta=null,lastGamma=null,accelX=0,accelY=0,accelZ=0;
 let buffs={damage:1,goldx2:false,shield:false};
 
+// AR 방향 시스템
+let currentYaw=0;   // 좌우 회전 (alpha 기반)
+let currentPitch=0; // 상하 기울기 (beta 기반)
+let yawOffset=0;    // 기준점 오프셋
+let orientationReady=false;
+
+// 귀신의 월드 공간 각도 (배치 시 결정)
+// ghostWorldAngle: {yaw: 도, pitch: 도}
+
 function $(id){return document.getElementById(id);}
 function save(){localStorage.setItem('sngh4',JSON.stringify(S));}
 function loadGame(){
@@ -381,20 +390,118 @@ async function requestMotion(){
 }
 function initMotion(){
   window.addEventListener('deviceorientation',e=>{
-    if(!gameRunning)return;
-    if(lastAlpha!==null){
-      let dA=Math.abs(e.alpha-lastAlpha);if(dA>180)dA=360-dA;
-      motionEnergy+=Math.min(dA*.8+Math.abs(e.beta-lastBeta)*.5+Math.abs(e.gamma-lastGamma)*.5,15);
+    if(e.alpha===null) return;
+
+    const alpha = e.alpha; // 0~360 나침반
+    const beta  = e.beta;  // 앞뒤기울기
+    const gamma = e.gamma; // 좌우기울기
+
+    // 처음 기준점 설정
+    if(!orientationReady){
+      yawOffset = alpha;
+      orientationReady = true;
     }
-    lastAlpha=e.alpha;lastBeta=e.beta;lastGamma=e.gamma;
+
+    // 현재 yaw (좌우): 기준점 기준 상대 각도
+    let rawYaw = alpha - yawOffset;
+    if(rawYaw > 180) rawYaw -= 360;
+    if(rawYaw < -180) rawYaw += 360;
+    currentYaw = rawYaw;
+
+    // 현재 pitch (상하): beta 그대로 (90=수평, 0=바닥,180=천장)
+    currentPitch = beta - 90; // -90~90 범위로
+
+    // 움직임 에너지 계산
+    if(lastAlpha !== null){
+      let dA = Math.abs(alpha - lastAlpha);
+      if(dA > 180) dA = 360 - dA;
+      const dB = Math.abs(beta - lastBeta);
+      const dG = Math.abs(gamma - lastGamma);
+      motionEnergy += Math.min(dA*0.8 + dB*0.5 + dG*0.5, 15);
+    }
+    lastAlpha=alpha; lastBeta=beta; lastGamma=gamma;
+
+    // AR: 귀신 위치 실시간 업데이트
+    updateGhostARPosition();
+
   },true);
+
   window.addEventListener('devicemotion',e=>{
     if(!gameRunning)return;
     const acc=e.accelerationIncludingGravity;if(!acc)return;
     const shake=(Math.abs(acc.x-accelX)+Math.abs(acc.y-accelY)+Math.abs(acc.z-accelZ))*.3;
     accelX=acc.x;accelY=acc.y;accelZ=acc.z;
-    motionEnergy+=Math.min(shake,10);
+    motionEnergy+=Math.min(shake,8);
   },true);
+}
+
+// 귀신 AR 위치 계산 - 월드 각도 → 화면 픽셀
+function updateGhostARPosition(){
+  if(!currentGhost || !currentGhost.el) return;
+
+  const ww = window.innerWidth;
+  const wh = window.innerHeight;
+
+  // 귀신의 월드 각도와 현재 카메라 각도의 차이
+  const dYaw   = currentGhost.worldYaw   - currentYaw;
+  const dPitch = currentGhost.worldPitch - currentPitch;
+
+  // 화면 FOV: 가로 60도, 세로 45도로 가정
+  const fovH = 60; // 가로 시야각
+  const fovV = 45; // 세로 시야각
+
+  // 화면 픽셀 위치로 변환
+  const screenX = ww/2 + (dYaw / fovH) * ww;
+  const screenY = wh/2 - (dPitch / fovV) * wh; // pitch는 반전
+
+  // 귀신 크기 (420px 기준)
+  const ghostW = currentGhost.data.isBoss ? 290 : 210;
+  const ghostH = ghostW;
+
+  // 위치 적용 (중앙 기준)
+  const left = screenX - ghostW/2;
+  const top  = screenY - ghostH/2;
+
+  currentGhost.el.style.left = left + 'px';
+  currentGhost.el.style.top  = top  + 'px';
+
+  // 터치 가능 여부: 화면에 일부라도 보이면 활성
+  const visible = screenX > -ghostW/2 && screenX < ww + ghostW/2
+               && screenY > -ghostH/2 && screenY < wh + ghostH/2;
+  currentGhost.el.style.pointerEvents = visible ? 'auto' : 'none';
+
+  // 방향 화살표 표시 (화면 밖이면)
+  updateDirectionArrow(screenX, screenY, ww, wh, visible);
+}
+
+// 화면 밖 귀신 방향 화살표
+function updateDirectionArrow(sx, sy, ww, wh, visible){
+  let arrow = document.getElementById('dirArrow');
+  if(!arrow){
+    arrow = document.createElement('div');
+    arrow.id = 'dirArrow';
+    arrow.style.cssText='position:fixed;z-index:30;pointer-events:none;font-size:32px;transition:all .1s;text-shadow:0 0 10px #f00;';
+    document.body.appendChild(arrow);
+  }
+  if(visible || !currentGhost){
+    arrow.style.opacity='0'; return;
+  }
+  arrow.style.opacity='1';
+
+  // 화면 중심에서 귀신 방향 각도
+  const cx=ww/2, cy=wh/2;
+  const angle = Math.atan2(sy-cy, sx-cx) * 180/Math.PI;
+  const rad = angle * Math.PI/180;
+
+  // 화면 테두리에 배치
+  const margin = 50;
+  const ex = Math.max(margin, Math.min(ww-margin, cx + Math.cos(rad)*120));
+  const ey = Math.max(margin, Math.min(wh-margin, cy + Math.sin(rad)*120));
+
+  arrow.style.left = (ex-16)+'px';
+  arrow.style.top  = (ey-16)+'px';
+  arrow.style.transform = 'rotate('+angle+'deg)';
+  arrow.textContent = '👉';
 }
 
 function motionLoop(){
@@ -410,6 +517,14 @@ function motionLoop(){
   }
   const radar=$('radarHint');
   radar.style.opacity=(!currentGhost&&motionEnergy>3)?'1':'0';
+  // orientation 미지원 기기 대비 fallback 위치
+  if(currentGhost && !orientationReady){
+    // 자이로 없으면 화면 중앙에 고정
+    const ww=window.innerWidth, wh=window.innerHeight;
+    const ghostW=currentGhost.data.isBoss?290:210;
+    currentGhost.el.style.left=(ww/2-ghostW/2)+'px';
+    currentGhost.el.style.top=(wh/2-ghostW/2)+'px';
+  }
   requestAnimationFrame(motionLoop);
 }
 
@@ -430,10 +545,15 @@ async function startGame(){
 function mkGhost(gd){
   if(currentGhost)return;
   const uid='g'+(gid++),hp=(gd.hp||100)+S.level*5;
-  const obj={uid,data:gd,hp,maxHp:hp,x:10+Math.random()*65,y:12+Math.random()*55,el:null,hpF:null,imgEl:null,inn:null,timer:null};
+  // AR 월드 각도 배치: 현재 yaw 기준 -90~+90도 랜덤, pitch -20~+20도
+  const worldYaw   = currentYaw + (Math.random()*140 - 70); // 현재 방향 ±70도
+  const worldPitch = (Math.random()*40 - 20);               // 상하 ±20도
+  const obj={uid,data:gd,hp,maxHp:hp,worldYaw,worldPitch,el:null,hpF:null,imgEl:null,inn:null,timer:null};
   const el=document.createElement('div');
   el.className='ghost-sprite'+(gd.isBoss?' boss-sprite':'');
-  el.id=uid;el.style.left=obj.x+'%';el.style.top=obj.y+'%';
+  el.id=uid;
+  // 초기 위치는 updateGhostARPosition으로 설정됨
+  el.style.left='50%'; el.style.top='50%';
   const wrap=document.createElement('div');wrap.className='ghost-img-wrap';
   wrap.style.animation='ghostAppear .5s ease-out forwards, gFloat 3s ease-in-out '+(Math.random()*2)+'s infinite';
   const img=document.createElement('img');
@@ -513,7 +633,11 @@ function ghostEsc(ghost){
   updateHUD();
 }
 
-function rmGEl(g){if(g.el&&g.el.parentNode)g.el.parentNode.removeChild(g.el);}
+function rmGEl(g){
+  if(g.el&&g.el.parentNode)g.el.parentNode.removeChild(g.el);
+  const arr=document.getElementById('dirArrow');
+  if(arr)arr.style.opacity='0';
+}
 function rmI(i){if(i.el&&i.el.parentNode)i.el.parentNode.removeChild(i.el);activeItems=activeItems.filter(x=>x.uid!==i.uid);}
 function clearLayer(){$('touchLayer').innerHTML='';currentGhost=null;activeItems=[];}
 
