@@ -406,10 +406,14 @@ function initMotion(){
     let rawYaw = alpha - yawOffset;
     if(rawYaw > 180) rawYaw -= 360;
     if(rawYaw < -180) rawYaw += 360;
-    currentYaw = rawYaw;
 
-    // 현재 pitch (상하): beta 그대로 (90=수평, 0=바닥,180=천장)
-    currentPitch = beta - 90; // -90~90 범위로
+    // 스무딩 (lerp): 0.05 = 매우 부드럽게, 0.3 = 빠르게
+    const smooth = 0.06;
+    currentYaw   = currentYaw   + (rawYaw - currentYaw) * smooth;
+
+    // 현재 pitch (상하)
+    const rawPitch = beta - 90;
+    currentPitch = currentPitch + (rawPitch - currentPitch) * smooth;
 
     // 움직임 에너지 계산
     if(lastAlpha !== null){
@@ -447,8 +451,8 @@ function updateGhostARPosition(){
   const dPitch = currentGhost.worldPitch - currentPitch;
 
   // 화면 FOV: 가로 60도, 세로 45도로 가정
-  const fovH = 60; // 가로 시야각
-  const fovV = 45; // 세로 시야각
+  const fovH = 120; // 가로 시야각 (넓을수록 둔감)
+  const fovV = 90; // 세로 시야각 (넓을수록 둔감)
 
   // 화면 픽셀 위치로 변환
   const screenX = ww/2 + (dYaw / fovH) * ww;
