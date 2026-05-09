@@ -455,7 +455,7 @@ function updateGhostARPosition(){
   const fovV = 90; // 세로 시야각 (넓을수록 둔감)
 
   // 화면 픽셀 위치로 변환
-  const screenX = ww/2 + (dYaw / fovH) * ww;
+  const screenX = ww/2 - (dYaw / fovH) * ww;
   const screenY = wh/2 - (dPitch / fovV) * wh; // pitch는 반전
 
   // 귀신 크기 (420px 기준)
