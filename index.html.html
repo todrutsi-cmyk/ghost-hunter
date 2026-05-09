@@ -1,965 +1,611 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>신비아파트: 고스트 헌터</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Black+Han+Sans&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --red: #ff1a1a;
-            --red-glow: rgba(255,26,26,0.7);
-            --gold: #ffd700;
-            --dark: #0a0008;
-            --purple: #3d0066;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body, html {
-            width: 100%; height: 100%; overflow: hidden;
-            background: #000;
-            font-family: 'Nanum Myeongjo', serif;
-        }
-
-        /* ── 카메라 뷰 ── */
-        #cam-view {
-            position: absolute; inset: 0;
-        }
-        video {
-            width: 100%; height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        /* 카메라 뷰파인더 오버레이 */
-        #cam-overlay {
-            position: absolute; inset: 0;
-            pointer-events: none;
-            background:
-                linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.5) 100%);
-        }
-
-        /* 코너 브라켓 */
-        .bracket { position: absolute; width: 50px; height: 50px; opacity: 0.7; }
-        .bracket.tl { top: 60px; left: 15px; border-top: 2px solid #0f0; border-left: 2px solid #0f0; }
-        .bracket.tr { top: 60px; right: 15px; border-top: 2px solid #0f0; border-right: 2px solid #0f0; }
-        .bracket.bl { bottom: 100px; left: 15px; border-bottom: 2px solid #0f0; border-left: 2px solid #0f0; }
-        .bracket.br { bottom: 100px; right: 15px; border-bottom: 2px solid #0f0; border-right: 2px solid #0f0; }
-
-        /* 스캔라인 */
-        #scanline {
-            position: absolute; inset: 0;
-            background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,255,0,0.02) 3px, rgba(0,255,0,0.02) 4px);
-            pointer-events: none;
-            z-index: 5;
-        }
-
-        /* 귀신 레이더 */
-        #radar-bar {
-            position: absolute; top: 0; left: 0; right: 0; height: 4px;
-            background: rgba(0,255,0,0.2);
-            z-index: 20;
-        }
-        #radar-fill {
-            height: 100%; background: #0f0;
-            width: 0%; transition: width 0.3s;
-            box-shadow: 0 0 8px #0f0;
-        }
-
-        /* 상단 HUD */
-        #hud-top {
-            position: absolute; top: 14px; left: 0; right: 0;
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 15px;
-            z-index: 30;
-        }
-        #ghost-detector {
-            background: rgba(0,0,0,0.7);
-            border: 1px solid #0f0;
-            border-radius: 6px;
-            padding: 4px 10px;
-            color: #0f0;
-            font-size: 11px;
-            font-family: monospace;
-            letter-spacing: 1px;
-        }
-        #collection-count {
-            background: rgba(0,0,0,0.7);
-            border: 1px solid var(--gold);
-            border-radius: 6px;
-            padding: 4px 10px;
-            color: var(--gold);
-            font-size: 11px;
-            font-family: monospace;
-        }
-
-        /* 메시지 */
-        #msg {
-            position: absolute; top: 50px; left: 0; right: 0;
-            text-align: center;
-            z-index: 30;
-            padding: 0 20px;
-        }
-        #msg-inner {
-            display: inline-block;
-            background: rgba(0,0,0,0.75);
-            color: #fff;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-size: 15px;
-            font-weight: 700;
-            border: 1px solid rgba(255,255,255,0.2);
-            text-shadow: 0 0 10px rgba(255,0,0,0.5);
-            font-family: 'Black Han Sans', sans-serif;
-        }
-
-        /* 귀신 등장 컨테이너 */
-        #target-wrap {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -55%);
-            display: none;
-            z-index: 100;
-            cursor: pointer;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-        }
-
-        /* 귀신 이미지 */
-        #ghost-img {
-            width: 180px;
-            height: 180px;
-            object-fit: contain;
-            filter: drop-shadow(0 0 20px var(--red)) drop-shadow(0 0 40px var(--red-glow));
-            animation: ghost-float 2.5s ease-in-out infinite;
-        }
-
-        @keyframes ghost-float {
-            0%, 100% { transform: translateY(0) rotate(-2deg) scale(1); }
-            50% { transform: translateY(-18px) rotate(2deg) scale(1.05); }
-        }
-
-        /* 귀신 이름 태그 */
-        #ghost-name-tag {
-            margin-top: 10px;
-            background: rgba(0,0,0,0.85);
-            border: 1px solid var(--red);
-            padding: 5px 18px;
-            border-radius: 20px;
-            color: #fff;
-            font-family: 'Black Han Sans', sans-serif;
-            font-size: 16px;
-            text-shadow: 0 0 8px var(--red);
-            letter-spacing: 2px;
-        }
-
-        /* 잡기 버튼 */
-        #catch-btn {
-            margin-top: 14px;
-            background: linear-gradient(135deg, #ff1a1a, #990000);
-            border: 2px solid #ff6666;
-            color: #fff;
-            padding: 12px 32px;
-            border-radius: 30px;
-            font-size: 18px;
-            font-family: 'Black Han Sans', sans-serif;
-            letter-spacing: 2px;
-            cursor: pointer;
-            box-shadow: 0 0 20px rgba(255,0,0,0.5);
-            animation: btn-pulse 1.5s ease-in-out infinite;
-        }
-        @keyframes btn-pulse {
-            0%, 100% { box-shadow: 0 0 20px rgba(255,0,0,0.5); }
-            50% { box-shadow: 0 0 35px rgba(255,0,0,0.9), 0 0 60px rgba(255,0,0,0.3); }
-        }
-
-        /* 카메라 셔터 효과 */
-        #shutter {
-            position: absolute; inset: 0;
-            background: #fff;
-            z-index: 500;
-            opacity: 0;
-            pointer-events: none;
-            transition: none;
-        }
-        #shutter.flash {
-            animation: shutter-anim 0.6s ease-out forwards;
-        }
-        @keyframes shutter-anim {
-            0% { opacity: 1; }
-            100% { opacity: 0; }
-        }
-
-        /* 포획 성공 캔버스 */
-        #capture-screen {
-            position: absolute; inset: 0;
-            z-index: 400;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0,0,0,0.85);
-        }
-        .polaroid {
-            background: #fff;
-            padding: 12px 12px 50px 12px;
-            border-radius: 3px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1);
-            transform: rotate(-3deg);
-            animation: polaroid-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        }
-        @keyframes polaroid-in {
-            from { transform: rotate(-3deg) scale(0.3) translateY(100px); opacity: 0; }
-            to { transform: rotate(-3deg) scale(1) translateY(0); opacity: 1; }
-        }
-        #polaroid-canvas {
-            display: block;
-            width: 240px;
-            height: 240px;
-            background: #ccc;
-        }
-        .polaroid-label {
-            text-align: center;
-            margin-top: 12px;
-            font-family: 'Black Han Sans', sans-serif;
-            font-size: 18px;
-            color: #222;
-            letter-spacing: 2px;
-        }
-        .polaroid-sub {
-            text-align: center;
-            font-size: 10px;
-            color: #888;
-            margin-top: 4px;
-            font-family: monospace;
-        }
-        #capture-close-btn {
-            position: absolute;
-            bottom: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255,255,255,0.15);
-            border: 2px solid rgba(255,255,255,0.5);
-            color: #fff;
-            padding: 12px 40px;
-            border-radius: 30px;
-            font-size: 16px;
-            font-family: 'Black Han Sans', sans-serif;
-            cursor: pointer;
-        }
-
-        /* ── 도감 ── */
-        #book-screen {
-            position: absolute; inset: 0;
-            background: linear-gradient(160deg, #0a0008 0%, #1a0030 100%);
-            z-index: 300; display: none;
-            overflow-y: auto;
-            padding: 20px;
-        }
-        #book-screen h1 {
-            font-family: 'Black Han Sans', sans-serif;
-            color: var(--gold);
-            font-size: 22px;
-            text-align: center;
-            margin-bottom: 5px;
-            text-shadow: 0 0 15px var(--gold);
-            letter-spacing: 3px;
-        }
-        #book-screen .subtitle {
-            text-align: center;
-            color: rgba(255,255,255,0.4);
-            font-size: 11px;
-            margin-bottom: 15px;
-            letter-spacing: 1px;
-        }
-
-        .tab-menu {
-            display: flex; gap: 8px;
-            margin-bottom: 16px;
-        }
-        .tab {
-            flex: 1; padding: 10px;
-            text-align: center;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
-            color: rgba(255,255,255,0.5);
-            font-family: 'Black Han Sans', sans-serif;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        .tab.active {
-            background: linear-gradient(135deg, #ff1a1a, #990000);
-            border-color: #ff4444;
-            color: #fff;
-            box-shadow: 0 0 15px rgba(255,0,0,0.4);
-        }
-
-        .progress-bar {
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-            height: 8px;
-            margin-bottom: 16px;
-            overflow: hidden;
-        }
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #ff1a1a, #ff6600);
-            border-radius: 10px;
-            transition: width 0.5s;
-            box-shadow: 0 0 10px rgba(255,100,0,0.6);
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-        }
-
-        .item-slot {
-            aspect-ratio: 0.85;
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 8px 4px;
-            position: relative;
-            overflow: hidden;
-            transition: transform 0.2s;
-        }
-
-        .item-slot.collected {
-            border-color: rgba(255,100,0,0.5);
-            background: rgba(255,50,0,0.08);
-        }
-
-        .item-slot.collected:active { transform: scale(0.95); }
-
-        .item-slot .slot-img {
-            width: 55px; height: 55px;
-            object-fit: contain;
-            margin-bottom: 6px;
-            filter: drop-shadow(0 0 8px rgba(255,50,0,0.6));
-        }
-
-        .item-slot.locked .slot-img {
-            filter: brightness(0) invert(0.1);
-        }
-
-        .item-slot .slot-name {
-            font-size: 9px;
-            color: #fff;
-            text-align: center;
-            line-height: 1.3;
-            font-family: 'Black Han Sans', sans-serif;
-        }
-
-        .item-slot.locked .slot-name { color: rgba(255,255,255,0.2); }
-
-        .item-slot .locked-icon {
-            font-size: 20px;
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            opacity: 0.4;
-        }
-
-        /* 폴라로이드 미니 (도감 내) */
-        .item-slot .polaroid-frame {
-            width: 55px; height: 60px;
-            background: #fff;
-            padding: 3px 3px 12px 3px;
-            transform: rotate(-2deg);
-            margin-bottom: 4px;
-        }
-        .item-slot .polaroid-frame img {
-            width: 100%; height: 100%;
-            object-fit: contain;
-        }
-
-        #book-close {
-            display: block;
-            margin: 20px auto 10px;
-            padding: 14px 50px;
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: #fff;
-            border-radius: 30px;
-            font-size: 16px;
-            font-family: 'Black Han Sans', sans-serif;
-            cursor: pointer;
-        }
-
-        /* ── 하단 UI ── */
-        .bottom-ui {
-            position: absolute; bottom: 20px; left: 0; right: 0;
-            display: flex; justify-content: center; gap: 15px;
-            z-index: 30;
-        }
-        .ui-btn {
-            background: rgba(0,0,0,0.75);
-            border: 1px solid rgba(255,255,255,0.3);
-            color: #fff;
-            padding: 12px 20px;
-            border-radius: 25px;
-            font-size: 13px;
-            font-family: 'Black Han Sans', sans-serif;
-            cursor: pointer;
-            letter-spacing: 1px;
-            backdrop-filter: blur(5px);
-            display: flex; align-items: center; gap: 6px;
-        }
-        .ui-btn .icon { font-size: 16px; }
-
-        /* ── 귀신 출현 경고 ── */
-        #danger-flash {
-            position: absolute; inset: 0;
-            z-index: 50;
-            pointer-events: none;
-            opacity: 0;
-            border: 4px solid red;
-            box-shadow: inset 0 0 60px rgba(255,0,0,0.5);
-        }
-        #danger-flash.active {
-            animation: danger-pulse 0.5s ease-in-out 3;
-        }
-        @keyframes danger-pulse {
-            0%, 100% { opacity: 0; }
-            50% { opacity: 1; }
-        }
-
-        /* ── 출현 연출 ── */
-        @keyframes appear-zap {
-            0% { opacity: 0; transform: translate(-50%, -55%) scale(0.2) rotate(-15deg); filter: brightness(5) drop-shadow(0 0 40px red); }
-            60% { opacity: 1; transform: translate(-50%, -55%) scale(1.1) rotate(3deg); }
-            100% { opacity: 1; transform: translate(-50%, -55%) scale(1) rotate(0deg); }
-        }
-
-        #target-wrap.show {
-            animation: appear-zap 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>신비아파트 고스트헌터 AR</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+body{background:#000;font-family:'Segoe UI',sans-serif;overflow:hidden;touch-action:none;}
+#video{position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:0;}
+#canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;}
+#touchLayer{position:fixed;top:0;left:0;width:100%;height:100%;z-index:3;}
+#hud{position:fixed;top:0;left:0;right:0;padding:10px 14px;z-index:10;pointer-events:none;}
+.hud-top{display:flex;justify-content:space-between;}
+.hud-box{background:rgba(0,0,20,.8);border:1px solid rgba(100,180,255,.35);border-radius:12px;padding:7px 11px;backdrop-filter:blur(6px);}
+.stat-row{display:flex;align-items:center;gap:5px;margin:2px 0;font-size:11px;color:#cde;}
+.stat-val{font-weight:700;color:#fff;}
+#timerWrap{position:fixed;top:0;left:0;right:0;height:4px;background:rgba(0,0,0,.5);z-index:11;pointer-events:none;}
+#timerFill{height:100%;background:linear-gradient(90deg,#0af,#08f);transition:width .1s,background .3s;}
+#weaponHUD{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:rgba(0,0,20,.85);border:1px solid rgba(100,180,255,.45);border-radius:14px;padding:7px 16px;z-index:10;pointer-events:none;display:flex;align-items:center;gap:10px;}
+#weaponIcon{font-size:22px;}
+#weaponName{color:#aef;font-size:12px;font-weight:700;}
+#weaponDmg{color:#f8c;font-size:11px;}
+#comboDisplay{position:fixed;top:42%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:20;text-align:center;opacity:0;transition:opacity .3s;}
+#comboText{font-size:38px;font-weight:900;color:#ff0;text-shadow:0 0 20px #fa0,0 0 40px #f80;}
+#comboSub{font-size:13px;color:#fda;margin-top:2px;}
+.screen{position:fixed;top:0;left:0;width:100%;height:100%;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+#startScreen{background:linear-gradient(160deg,#080014,#04001e,#000);}
+#startScreen h1{font-size:30px;font-weight:900;color:#fff;text-align:center;text-shadow:0 0 30px #88f;letter-spacing:2px;line-height:1.3;}
+#startGhost{font-size:78px;animation:sgF 2s ease-in-out infinite;margin-bottom:8px;}
+@keyframes sgF{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.btn{background:linear-gradient(135deg,#1a0080,#0040ff);color:#fff;border:none;border-radius:14px;padding:13px 34px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:1px;box-shadow:0 4px 20px rgba(80,100,255,.5);margin:5px;}
+.btn:active{transform:scale(.95);}
+.btn.gold{background:linear-gradient(135deg,#664400,#ffaa00);}
+.btn.green{background:linear-gradient(135deg,#004400,#00bb44);}
+.btn.red{background:linear-gradient(135deg,#800,#f00);}
+.btn.sm{padding:9px 18px;font-size:12px;}
+.ghost-sprite{position:fixed;z-index:5;pointer-events:auto;cursor:pointer;}
+.ghost-inner{display:flex;flex-direction:column;align-items:center;animation:gF 2.6s ease-in-out infinite;}
+@keyframes gF{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-16px) rotate(2deg)}}
+.ghost-emoji{font-size:60px;filter:drop-shadow(0 0 12px rgba(150,100,255,.9));}
+.ghost-hp-bar{width:65px;height:7px;background:rgba(0,0,0,.5);border-radius:4px;margin-top:3px;overflow:hidden;}
+.ghost-hp-fill{height:100%;background:linear-gradient(90deg,#f00,#f80);border-radius:4px;transition:width .12s;}
+.ghost-name{color:#ddf;font-size:9px;font-weight:700;text-shadow:0 0 5px #88f;margin-top:2px;}
+.ghost-hit{animation:hF .18s;}
+@keyframes hF{0%,100%{filter:drop-shadow(0 0 12px rgba(150,100,255,.9))}50%{filter:brightness(3.5) drop-shadow(0 0 18px #fff)}}
+.boss-sprite .ghost-emoji{font-size:90px;}
+.boss-sprite .ghost-hp-bar{width:110px;height:10px;}
+.dmg-text{position:fixed;z-index:30;font-size:22px;font-weight:900;color:#ff4;text-shadow:0 0 10px #f80;pointer-events:none;animation:dA .7s forwards;}
+@keyframes dA{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-55px) scale(.6)}}
+.item-sprite{position:fixed;z-index:4;pointer-events:auto;cursor:pointer;animation:iF 1.8s ease-in-out infinite;}
+@keyframes iF{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.item-emoji{font-size:40px;filter:drop-shadow(0 0 8px gold);}
+#polaroidOverlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:60;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;}
+.polaroid{background:#f5f0e8;padding:15px 15px 46px;border-radius:3px;box-shadow:0 8px 40px rgba(0,0,0,.8);transform:rotate(-2deg);max-width:260px;text-align:center;animation:pI .38s ease;}
+@keyframes pI{from{transform:scale(.4) rotate(-12deg);opacity:0}to{transform:scale(1) rotate(-2deg);opacity:1}}
+.polaroid-ghost{font-size:76px;display:block;margin:8px 0;}
+.polaroid-label{font-family:monospace;color:#333;font-size:12px;}
+.polaroid-reward{color:#a80;font-weight:700;font-size:14px;margin-top:5px;}
+#flashOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:55;opacity:0;pointer-events:none;transition:opacity .08s;}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;z-index:80;background:rgba(0,0,18,.94);display:none;flex-direction:column;align-items:center;overflow-y:auto;padding:16px 0 80px;}
+.modal.active{display:flex;}
+.modal-title{font-size:20px;font-weight:900;color:#aef;margin:16px 0 14px;text-align:center;}
+.modal-close{position:fixed;top:12px;right:14px;font-size:28px;color:#88f;cursor:pointer;z-index:81;}
+.shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;width:100%;max-width:420px;padding:0 14px;}
+.shop-item{background:rgba(18,18,55,.92);border:1px solid rgba(100,120,255,.35);border-radius:11px;padding:11px;cursor:pointer;}
+.shop-item:active{transform:scale(.96);}
+.shop-item.owned{border-color:#0f8;}
+.shop-item.equipped{border-color:#ff0;background:rgba(45,45,0,.55);}
+.shop-emoji{font-size:28px;}
+.shop-name{font-size:12px;font-weight:700;color:#cdf;margin:3px 0 2px;}
+.shop-stat{font-size:10px;color:#89a;}
+.shop-price{font-size:11px;color:#fda;font-weight:700;margin-top:3px;}
+.upgrade-card{background:rgba(18,18,55,.92);border:1px solid rgba(100,120,255,.35);border-radius:11px;padding:13px;width:100%;max-width:420px;margin:6px 14px;}
+.upgrade-card h3{color:#aef;font-size:14px;margin-bottom:7px;}
+.mat-row{display:flex;justify-content:space-between;margin:3px 0;font-size:11px;color:#bcd;}
+.mat-have{color:#0f0;font-weight:700;}
+.mat-need{color:#f80;}
+.inv-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;width:100%;max-width:420px;padding:0 14px;}
+.inv-mat{background:rgba(18,18,55,.9);border:1px solid rgba(80,120,200,.35);border-radius:10px;padding:9px;text-align:center;}
+.inv-mat .me{font-size:26px;}
+.inv-mat .mn{font-size:9px;color:#9ab;margin-top:2px;}
+.inv-mat .mc{font-size:15px;font-weight:700;color:#fff;}
+.ach-item{background:rgba(18,18,55,.85);border:1px solid rgba(80,80,200,.35);border-radius:10px;padding:10px 13px;width:100%;max-width:420px;margin:3px 14px;display:flex;gap:11px;align-items:center;}
+.ach-done{border-color:#f80;background:rgba(55,38,0,.5);}
+.ach-icon{font-size:26px;}
+.ach-info h4{color:#def;font-size:12px;}
+.ach-info p{color:#89a;font-size:10px;}
+.ach-reward{color:#fc0;font-size:10px;font-weight:700;}
+#bottomBar{position:fixed;bottom:0;left:0;right:0;height:78px;background:rgba(0,0,18,.92);border-top:1px solid rgba(100,150,255,.28);display:flex;justify-content:space-around;align-items:center;z-index:10;backdrop-filter:blur(8px);}
+.bar-btn{display:flex;flex-direction:column;align-items:center;gap:2px;color:#88c;font-size:10px;font-weight:600;cursor:pointer;padding:7px 11px;border-radius:10px;}
+.bar-btn:active{background:rgba(100,150,255,.2);transform:scale(.92);}
+.bar-btn .bbi{font-size:23px;}
+#bossAlert{position:fixed;top:28%;left:50%;transform:translate(-50%,-50%);z-index:35;text-align:center;pointer-events:none;opacity:0;transition:opacity .5s;}
+#bossAlert h2{font-size:40px;font-weight:900;color:#f00;text-shadow:0 0 20px #f00,0 0 60px #800;animation:bS .08s infinite;}
+@keyframes bS{0%,100%{transform:rotate(-1deg)}50%{transform:rotate(1deg)}}
+#lvlBanner{position:fixed;top:20%;left:50%;transform:translateX(-50%);z-index:40;text-align:center;pointer-events:none;opacity:0;transition:opacity .4s;}
+#lvlBanner h2{font-size:30px;font-weight:900;color:#ff0;text-shadow:0 0 20px #f80;}
+#notif{position:fixed;top:76px;left:50%;transform:translateX(-50%);z-index:50;background:rgba(8,8,36,.96);border:1px solid rgba(100,150,255,.45);border-radius:10px;padding:9px 18px;color:#aef;font-size:12px;font-weight:700;text-align:center;opacity:0;transition:opacity .3s;pointer-events:none;max-width:310px;white-space:nowrap;}
+#specialEvt{position:fixed;top:0;left:0;width:100%;height:100%;z-index:45;pointer-events:none;display:none;}
+.se-bg{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at center,rgba(100,0,255,.28) 0%,transparent 70%);animation:seP .9s ease-in-out infinite;}
+@keyframes seP{0%,100%{opacity:.4}50%{opacity:1}}
+.particle{position:fixed;pointer-events:none;z-index:25;border-radius:50%;animation:pF .75s forwards;}
+@keyframes pF{0%{opacity:1;transform:scale(1) translate(0,0)}100%{opacity:0;transform:scale(0) translate(var(--px),var(--py))}}
+#gameOverScreen{background:rgba(0,0,0,.96);}
+#gameOverScreen h2{font-size:34px;font-weight:900;color:#f44;text-shadow:0 0 28px #f00;margin-bottom:14px;}
+.result-box{background:rgba(18,18,55,.92);border:1px solid rgba(100,120,255,.35);border-radius:14px;padding:18px 28px;text-align:center;margin-bottom:18px;min-width:250px;}
+.r-row{display:flex;justify-content:space-between;gap:28px;margin:5px 0;font-size:13px;color:#bdf;}
+.r-val{color:#fff;font-weight:700;}
+</style>
 </head>
 <body>
+<video id="video" autoplay playsinline muted></video>
+<canvas id="canvas"></canvas>
+<div id="touchLayer"></div>
+<div id="flashOverlay"></div>
+<div id="notif"></div>
+<div id="timerWrap"><div id="timerFill" style="width:100%"></div></div>
 
-<!-- 카메라 -->
-<div id="cam-view">
-    <video id="v" autoplay playsinline muted></video>
-    <div id="cam-overlay">
-        <div class="bracket tl"></div>
-        <div class="bracket tr"></div>
-        <div class="bracket bl"></div>
-        <div class="bracket br"></div>
+<div id="hud">
+  <div class="hud-top">
+    <div class="hud-box">
+      <div class="stat-row"><span>👻</span><span>처치</span><span class="stat-val" id="hKill">0</span></div>
+      <div class="stat-row"><span>💀</span><span>실패</span><span class="stat-val" id="hFail">0</span><span style="color:#f88;font-size:10px">/3</span></div>
+      <div class="stat-row"><span>🔥</span><span>콤보</span><span class="stat-val" id="hCombo">0</span></div>
     </div>
-    <div id="scanline"></div>
-</div>
-
-<!-- 레이더 -->
-<div id="radar-bar"><div id="radar-fill"></div></div>
-
-<!-- HUD 상단 -->
-<div id="hud-top">
-    <div id="ghost-detector">👁 탐지중...</div>
-    <div id="collection-count">📖 0 / 25</div>
-</div>
-
-<!-- 위험 플래시 -->
-<div id="danger-flash"></div>
-
-<!-- 메시지 -->
-<div id="msg"><div id="msg-inner">📡 주변을 탐색하세요!</div></div>
-
-<!-- 귀신 등장 -->
-<div id="target-wrap">
-    <img id="ghost-img" src="" alt="">
-    <div id="ghost-name-tag">???</div>
-    <button id="catch-btn" onclick="catchGhost()">📸 잡기!</button>
-</div>
-
-<!-- 셔터 효과 -->
-<div id="shutter"></div>
-
-<!-- 포획 성공 화면 -->
-<div id="capture-screen" style="display:none; position:absolute; inset:0; z-index:400; align-items:center; justify-content:center; background:rgba(0,0,0,0.85);">
-    <div class="polaroid" id="polaroid-card">
-        <canvas id="polaroid-canvas" width="240" height="240"></canvas>
-        <div class="polaroid-label" id="polaroid-name">귀신</div>
-        <div class="polaroid-sub" id="polaroid-time"></div>
+    <div class="hud-box">
+      <div class="stat-row"><span>⭐</span><span>Lv.</span><span class="stat-val" id="hLv">1</span></div>
+      <div class="stat-row" style="font-size:9px;color:#88f;" id="hTitle">신입 헌터</div>
+      <div class="stat-row"><span>💰</span><span class="stat-val" id="hGold">0</span><span style="color:#fa0;font-size:10px">G</span></div>
+      <div class="stat-row"><span>✨</span><span class="stat-val" id="hExp">0</span><span style="color:#8af;font-size:10px">XP</span></div>
     </div>
-    <button id="capture-close-btn" onclick="closeCaptureScreen()">도감에 저장 ✓</button>
+  </div>
 </div>
 
-<!-- 도감 화면 -->
-<div id="book-screen">
-    <h1>👻 고스트 도감</h1>
-    <div class="subtitle">신비아파트 귀신 & 아이템 수집록</div>
-    <div class="tab-menu">
-        <div id="tab-g" class="tab active" onclick="switchTab('g')">귀신 (15)</div>
-        <div id="tab-i" class="tab" onclick="switchTab('i')">아이템 (10)</div>
-    </div>
-    <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
-    <div id="grid-content" class="grid"></div>
-    <button id="book-close" onclick="closeBook()">닫기</button>
+<div id="weaponHUD">
+  <span id="weaponIcon">🗡️</span>
+  <div><div id="weaponName">기본 퇴마봉</div><div id="weaponDmg">공격력: 10 | 강화: +0</div></div>
 </div>
 
-<!-- 하단 버튼 -->
-<div class="bottom-ui">
-    <button class="ui-btn" onclick="showBook()">
-        <span class="icon">📖</span> 도감
-    </button>
-    <button class="ui-btn" onclick="manualTrigger()">
-        <span class="icon">🔦</span> 탐색
-    </button>
+<div id="comboDisplay">
+  <div id="comboText">3 COMBO!</div>
+  <div id="comboSub">공격력 +9%</div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+<div id="bossAlert"><h2>⚠️ 보스 출현! ⚠️</h2></div>
+<div id="lvlBanner"><h2>🌟 레벨 업!</h2><div id="lvlTitle" style="color:#fda;font-size:15px;margin-top:3px;"></div></div>
+<div id="specialEvt"><div class="se-bg"></div></div>
+
+<div id="polaroidOverlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:60;background:rgba(0,0,0,.85);align-items:center;justify-content:center;">
+  <div class="polaroid">
+    <span class="polaroid-ghost" id="polEmoji">👻</span>
+    <div class="polaroid-label" id="polName">귀신</div>
+    <div class="polaroid-reward" id="polReward">+50G · +30XP</div>
+    <div style="margin-top:8px;color:#666;font-size:10px;">📷 포획 완료</div>
+  </div>
+</div>
+
+<div id="bottomBar">
+  <div class="bar-btn" onclick="openShop()"><span class="bbi">🏪</span>상점</div>
+  <div class="bar-btn" onclick="openUpgrade()"><span class="bbi">⚒️</span>강화</div>
+  <div class="bar-btn" onclick="openInventory()"><span class="bbi">🎒</span>인벤</div>
+  <div class="bar-btn" onclick="openAch()"><span class="bbi">🏆</span>업적</div>
+</div>
+
+<div class="screen" id="startScreen">
+  <div id="startGhost">👻</div>
+  <h1>신비아파트<br>고스트헌터 AR</h1>
+  <p style="color:#88f;font-size:13px;margin:6px 0 28px;">카메라로 귀신을 잡아라!</p>
+  <button class="btn" onclick="startGame()">🎮 게임 시작</button>
+  <button class="btn gold" onclick="loadGame()">💾 이어하기</button>
+  <div style="color:#334;font-size:10px;margin-top:10px;">카메라 권한이 필요합니다</div>
+</div>
+
+<div class="screen" id="gameOverScreen" style="display:none;">
+  <h2>💀 게임 오버</h2>
+  <div class="result-box">
+    <div class="r-row"><span>이번 처치</span><span class="r-val" id="goKill">0</span></div>
+    <div class="r-row"><span>획득 골드</span><span class="r-val" id="goGold">0G</span></div>
+    <div class="r-row"><span>레벨</span><span class="r-val" id="goLv">1</span></div>
+    <div class="r-row"><span>최고 콤보</span><span class="r-val" id="goCombo">0</span></div>
+  </div>
+  <button class="btn" onclick="restartGame()">🔄 다시 시작</button>
+  <button class="btn gold" onclick="goHome()">🏠 메인으로</button>
+</div>
+
+<div class="modal" id="shopModal">
+  <span class="modal-close" onclick="closeM('shopModal')">✕</span>
+  <div class="modal-title">⚔️ 무기 상점</div>
+  <div class="shop-grid" id="shopGrid"></div>
+</div>
+
+<div class="modal" id="upgradeModal">
+  <span class="modal-close" onclick="closeM('upgradeModal')">✕</span>
+  <div class="modal-title">⚒️ 무기 강화</div>
+  <div id="upgradeContent" style="width:100%;"></div>
+</div>
+
+<div class="modal" id="invModal">
+  <span class="modal-close" onclick="closeM('invModal')">✕</span>
+  <div class="modal-title">🎒 강화 재료 인벤토리</div>
+  <div class="inv-grid" id="invGrid"></div>
+</div>
+
+<div class="modal" id="achModal">
+  <span class="modal-close" onclick="closeM('achModal')">✕</span>
+  <div class="modal-title">🏆 업적</div>
+  <div id="achList" style="width:100%;"></div>
+</div>
+
 <script>
-// ──────────────────────────────────────────────
-//  데이터
-// ──────────────────────────────────────────────
-const ghosts = [
-    {
-        id:'g1', name:'어둑시니', type:'ghost', rarity:'rare',
-        img:'https://www.svgrepo.com/show/530467/ghost.svg',
-        desc:'어둠 속에서 사람을 홀리는 귀신'
-    },
-    {
-        id:'g2', name:'불가살이', type:'ghost', rarity:'epic',
-        img:'https://www.svgrepo.com/show/530468/ghost.svg',
-        desc:'불에 태워도 죽지 않는 괴물'
-    },
-    {
-        id:'g3', name:'달걀귀신', type:'ghost', rarity:'common',
-        img:'https://www.svgrepo.com/show/530469/ghost.svg',
-        desc:'얼굴 없는 공포의 귀신'
-    },
-    {
-        id:'g4', name:'망부화', type:'ghost', rarity:'rare',
-        img:'https://www.svgrepo.com/show/530470/ghost.svg',
-        desc:'남편을 기다리다 귀신이 된 여인'
-    },
-    {
-        id:'g5', name:'마고할망', type:'ghost', rarity:'epic',
-        img:'https://www.svgrepo.com/show/530471/ghost.svg',
-        desc:'제주도의 거대한 할망 귀신'
-    },
-    {
-        id:'g6', name:'무면귀', type:'ghost', rarity:'common',
-        img:'https://www.svgrepo.com/show/530467/ghost.svg',
-        desc:'얼굴이 없는 섬뜩한 귀신'
-    },
-    {
-        id:'g7', name:'골묘귀', type:'ghost', rarity:'rare',
-        img:'https://www.svgrepo.com/show/530468/ghost.svg',
-        desc:'무덤을 지키는 고양이 귀신'
-    },
-    {
-        id:'g8', name:'진명', type:'ghost', rarity:'legendary',
-        img:'https://www.svgrepo.com/show/530469/ghost.svg',
-        desc:'최상위 귀신. 극히 드물게 나타난다'
-    },
-    {
-        id:'g9', name:'치돈귀', type:'ghost', rarity:'common',
-        img:'https://www.svgrepo.com/show/530470/ghost.svg',
-        desc:'주방에 사는 작은 귀신'
-    },
-    {
-        id:'g10', name:'환마귀', type:'ghost', rarity:'rare',
-        img:'https://www.svgrepo.com/show/530471/ghost.svg',
-        desc:'환상을 만드는 교활한 귀신'
-    },
-    {
-        id:'g11', name:'헤론', type:'ghost', rarity:'epic',
-        img:'https://www.svgrepo.com/show/530467/ghost.svg',
-        desc:'서양에서 온 강력한 악령'
-    },
-    {
-        id:'g12', name:'라바나브', type:'ghost', rarity:'legendary',
-        img:'https://www.svgrepo.com/show/530468/ghost.svg',
-        desc:'고대 인도에서 온 악신'
-    },
-    {
-        id:'g13', name:'팬텀토르소', type:'ghost', rarity:'epic',
-        img:'https://www.svgrepo.com/show/530469/ghost.svg',
-        desc:'상반신만 나타나는 귀신'
-    },
-    {
-        id:'g14', name:'흑진귀', type:'ghost', rarity:'rare',
-        img:'https://www.svgrepo.com/show/530470/ghost.svg',
-        desc:'칠흑 같은 어둠의 귀신'
-    },
-    {
-        id:'g15', name:'벽수귀', type:'ghost', rarity:'common',
-        img:'https://www.svgrepo.com/show/530471/ghost.svg',
-        desc:'벽 속에 사는 귀신'
-    }
+const GHOSTS=[
+  {id:0,name:'흰 귀신',emoji:'👻',hp:30,gold:15,exp:10},{id:1,name:'해골 귀신',emoji:'💀',hp:50,gold:25,exp:18},
+  {id:2,name:'악마 귀신',emoji:'😈',hp:70,gold:35,exp:25},{id:3,name:'거미 귀신',emoji:'🕷️',hp:45,gold:20,exp:15},
+  {id:4,name:'박쥐 귀신',emoji:'🦇',hp:40,gold:18,exp:13},{id:5,name:'뱀 귀신',emoji:'🐍',hp:60,gold:30,exp:22},
+  {id:6,name:'호박 귀신',emoji:'🎃',hp:55,gold:28,exp:20},{id:7,name:'외계 귀신',emoji:'👽',hp:80,gold:40,exp:30},
+  {id:8,name:'로봇 귀신',emoji:'🤖',hp:90,gold:45,exp:35},{id:9,name:'좀비 귀신',emoji:'🧟',hp:100,gold:50,exp:40},
+  {id:10,name:'뱀파이어',emoji:'🧛',hp:120,gold:60,exp:50},{id:11,name:'늑대인간',emoji:'🐺',hp:110,gold:55,exp:45},
+  {id:12,name:'마녀',emoji:'🧙',hp:85,gold:42,exp:32},{id:13,name:'해파리 귀신',emoji:'🪼',hp:35,gold:16,exp:11},
+  {id:14,name:'용 귀신',emoji:'🐉',hp:150,gold:75,exp:60},{id:15,name:'악령',emoji:'😱',hp:65,gold:32,exp:24},
+  {id:16,name:'도깨비',emoji:'👹',hp:130,gold:65,exp:52},{id:17,name:'두 얼굴',emoji:'🃏',hp:75,gold:38,exp:28},
+  {id:18,name:'유령 손',emoji:'🤚',hp:25,gold:12,exp:8},{id:19,name:'눈알 귀신',emoji:'👁️',hp:55,gold:27,exp:20},
+  {id:20,name:'얼음 귀신',emoji:'❄️',hp:95,gold:47,exp:38},{id:21,name:'불꽃 귀신',emoji:'🔥',hp:105,gold:52,exp:42},
+  {id:22,name:'번개 귀신',emoji:'⚡',hp:70,gold:35,exp:26},{id:23,name:'독 귀신',emoji:'☠️',hp:85,gold:42,exp:33},
+  {id:24,name:'문어 귀신',emoji:'🐙',hp:115,gold:57,exp:46},{id:25,name:'구미호',emoji:'🦊',hp:140,gold:70,exp:56},
+  {id:26,name:'거북 귀신',emoji:'🐢',hp:200,gold:100,exp:80},{id:27,name:'고래 귀신',emoji:'🐋',hp:180,gold:90,exp:72},
+  {id:28,name:'사신',emoji:'💫',hp:160,gold:80,exp:64},{id:29,name:'궁극 악마',emoji:'🔱',hp:250,gold:125,exp:100},
+];
+const BOSS={id:99,name:'👑 귀신왕',emoji:'🫠',hp:1500,gold:500,exp:400,isBoss:true};
+const SPECIAL={id:98,name:'✨ 황금 귀신',emoji:'🌟',hp:200,gold:300,exp:250,isSpecial:true};
+const ITEMS=[
+  {id:0,name:'골드 주머니',emoji:'💰',effect:'gold',value:50},{id:1,name:'경험치 구슬',emoji:'🔮',effect:'exp',value:40},
+  {id:2,name:'퇴마 물약',emoji:'🧪',effect:'damage',value:2,dur:8},{id:3,name:'방패 부적',emoji:'🛡️',effect:'shield',dur:10},
+  {id:4,name:'시간 연장',emoji:'⏰',effect:'time',value:20},{id:5,name:'폭탄 부적',emoji:'💣',effect:'bomb',value:80},
+  {id:6,name:'골드 두 배',emoji:'🎰',effect:'goldx2',dur:15},{id:7,name:'강화 재료A',emoji:'💎',effect:'mat',value:'matA'},
+  {id:8,name:'강화 재료B',emoji:'🪨',effect:'mat',value:'matB'},{id:9,name:'강화 재료C',emoji:'🌙',effect:'mat',value:'matC'},
+  {id:10,name:'강화 재료D',emoji:'⚗️',effect:'mat',value:'matD'},{id:11,name:'콤보 부스터',emoji:'🌀',effect:'combo',value:5},
+  {id:12,name:'전체 공격',emoji:'💥',effect:'aoe',value:50},{id:13,name:'부활 부적',emoji:'🌸',effect:'revive'},
+  {id:14,name:'황금 부적',emoji:'🏅',effect:'gold',value:150},{id:15,name:'레어 재료',emoji:'🌈',effect:'mat',value:'matRare'},
+  {id:16,name:'HP 회복',emoji:'💊',effect:'revive'},{id:17,name:'귀신 소환',emoji:'📣',effect:'summon'},
+  {id:18,name:'무기강화석',emoji:'🔷',effect:'mat',value:'matWeapon'},{id:19,name:'경험치 폭탄',emoji:'💠',effect:'exp',value:100},
+];
+const WEAPONS=[
+  {id:0,name:'기본 퇴마봉',emoji:'🗡️',dmg:10,price:0,desc:'기본 제공'},
+  {id:1,name:'은빛 단검',emoji:'🔪',dmg:22,price:200,desc:'빠른 공격'},
+  {id:2,name:'퇴마 창',emoji:'⚔️',dmg:40,price:500,desc:'관통 공격'},
+  {id:3,name:'불꽃 검',emoji:'🔥',dmg:65,price:1000,desc:'화염 속성'},
+  {id:4,name:'번개 지팡이',emoji:'⚡',dmg:95,price:2000,desc:'번개 속성'},
+  {id:5,name:'얼음 창',emoji:'❄️',dmg:130,price:3500,desc:'빙결 효과'},
+  {id:6,name:'성스러운 검',emoji:'✝️',dmg:180,price:6000,desc:'신성한 힘'},
+  {id:7,name:'신비 지팡이',emoji:'🪄',dmg:260,price:10000,desc:'최강의 무기'},
+];
+const MATS=[
+  {id:'matA',name:'퇴마석',emoji:'💎'},{id:'matB',name:'귀신석',emoji:'🪨'},
+  {id:'matC',name:'달빛석',emoji:'🌙'},{id:'matD',name:'연성석',emoji:'⚗️'},
+  {id:'matRare',name:'레어석',emoji:'🌈'},{id:'matWeapon',name:'무기강화석',emoji:'🔷'},
+];
+const RECIPES=[
+  {mats:{matA:2,matB:1},bonus:8},{mats:{matA:3,matB:2},bonus:16},
+  {mats:{matA:5,matB:3,matC:1},bonus:28},{mats:{matB:5,matC:2,matD:1},bonus:43},
+  {mats:{matC:3,matD:2,matRare:1},bonus:62},{mats:{matC:5,matD:3,matRare:2},bonus:85},
+  {mats:{matD:5,matRare:3,matWeapon:1},bonus:115},{mats:{matD:8,matRare:4,matWeapon:2},bonus:150},
+  {mats:{matRare:5,matWeapon:3},bonus:195},{mats:{matRare:8,matWeapon:5},bonus:250},
+];
+const TITLES=[{lv:1,t:'신입 헌터'},{lv:3,t:'퇴마사'},{lv:5,t:'귀신파괴자'},{lv:8,t:'혼령추격자'},{lv:10,t:'엑소시스트'},{lv:15,t:'귀신왕 사냥꾼'},{lv:20,t:'전설의 헌터'},{lv:30,t:'신비 헌터'}];
+const ACHS=[
+  {id:0,name:'첫 포획',desc:'귀신을 처음 잡는다',icon:'👻',cond:s=>s.totalKills>=1,rg:50,re:30},
+  {id:1,name:'귀신 사냥꾼',desc:'귀신 10마리 처치',icon:'🎯',cond:s=>s.totalKills>=10,rg:100,re:60},
+  {id:2,name:'퇴마 달인',desc:'귀신 50마리 처치',icon:'⭐',cond:s=>s.totalKills>=50,rg:300,re:200},
+  {id:3,name:'귀신왕 사냥꾼',desc:'귀신 100마리 처치',icon:'🏆',cond:s=>s.totalKills>=100,rg:1000,re:500},
+  {id:4,name:'부자 헌터',desc:'골드 1000 보유',icon:'💰',cond:s=>s.gold>=1000,rg:0,re:100},
+  {id:5,name:'콤보 마스터',desc:'10 콤보 달성',icon:'🔥',cond:s=>s.maxCombo>=10,rg:200,re:150},
+  {id:6,name:'보스 킬러',desc:'보스 귀신 처치',icon:'💀',cond:s=>s.bossKills>=1,rg:500,re:400},
+  {id:7,name:'황금 사냥꾼',desc:'황금 귀신 포획',icon:'🌟',cond:s=>s.specialKills>=1,rg:300,re:200},
+  {id:8,name:'무기 수집가',desc:'무기 3종 이상 구매',icon:'⚔️',cond:s=>s.ownedWeapons>=3,rg:200,re:100},
+  {id:9,name:'강화 장인',desc:'무기 5레벨 강화',icon:'⚒️',cond:s=>s.maxWLv>=5,rg:400,re:300},
+  {id:10,name:'업적 수집가',desc:'업적 5개 달성',icon:'📜',cond:s=>s.achDone>=5,rg:200,re:150},
+  {id:11,name:'레벨 마스터',desc:'레벨 10 달성',icon:'🌙',cond:s=>s.level>=10,rg:500,re:0},
+  {id:12,name:'아이템 수집가',desc:'아이템 20개 수집',icon:'🎁',cond:s=>s.totalItems>=20,rg:150,re:80},
+  {id:13,name:'전설',desc:'레벨 20 달성',icon:'🔱',cond:s=>s.level>=20,rg:2000,re:1000},
 ];
 
-const items = [
-    { id:'i1', name:'강림 인형', type:'item', img:'https://www.svgrepo.com/show/523186/doll.svg', desc:'귀신을 부르는 인형' },
-    { id:'i2', name:'달콤 초콜릿', type:'item', img:'https://www.svgrepo.com/show/480765/chocolate.svg', desc:'귀신을 달래는 간식' },
-    { id:'i3', name:'마법 고스트볼', type:'item', img:'https://www.svgrepo.com/show/523187/ball.svg', desc:'귀신을 가두는 볼' },
-    { id:'i4', name:'퇴마 부적', type:'item', img:'https://www.svgrepo.com/show/523188/talisman.svg', desc:'귀신을 쫓는 부적' },
-    { id:'i5', name:'할머니 엿', type:'item', img:'https://www.svgrepo.com/show/480766/candy.svg', desc:'신비한 힘의 전통 엿' },
-    { id:'i6', name:'정화의 소금', type:'item', img:'https://www.svgrepo.com/show/523189/salt.svg', desc:'악귀를 정화하는 소금' },
-    { id:'i7', name:'악령퇴치 팥', type:'item', img:'https://www.svgrepo.com/show/480767/beans.svg', desc:'악령을 쫓는 붉은 팥' },
-    { id:'i8', name:'영혼 카메라', type:'item', img:'https://www.svgrepo.com/show/523190/camera.svg', desc:'귀신을 찍는 특수 카메라' },
-    { id:'i9', name:'신비 랜턴', type:'item', img:'https://www.svgrepo.com/show/523191/lantern.svg', desc:'어둠을 밝히는 신비한 빛' },
-    { id:'i10', name:'고스트 지도', type:'item', img:'https://www.svgrepo.com/show/523192/map.svg', desc:'귀신 출몰 지도' }
-];
+const dS=()=>({gold:0,exp:0,level:1,title:'신입 헌터',totalKills:0,bossKills:0,specialKills:0,totalItems:0,maxCombo:0,ownedWeapons:1,maxWLv:0,achDone:0,weapons:[0],equippedWeapon:0,weaponLevels:{0:0},materials:{matA:0,matB:0,matC:0,matD:0,matRare:0,matWeapon:0},achievements:{}});
+let S=dS(),activeG=[],activeI=[],gid=0;
+let timerIv,spawnIv,itemIv,comboTimer,notifTimer;
+let bossSpawned=false,gameRunning=false,timeLeft=90,maxTime=90;
+let buffs={damage:1,goldx2:false,shield:false};
+let sKills=0,sGold=0,sCombo=0;
 
-// 이모지 기반 고품질 귀신 SVG 생성 (실제 이미지 대신)
-const ghostEmojis = ['👻','💀','🕷','🦇','🎃','👾','😱','🌑','🔮','💜','🌙','⚰️','🩸','🕯','👁'];
-const itemEmojis  = ['🪆','🍫','🔮','📜','🍬','🧂','🫘','📷','🏮','🗺'];
+function save(){const d=Object.assign({},S);localStorage.setItem('sngh2',JSON.stringify(d));}
+function loadGame(){
+  const r=localStorage.getItem('sngh2');
+  if(!r){notify('저장 데이터가 없습니다.');return;}
+  Object.assign(S,JSON.parse(r));notify('💾 이어하기 완료!');startGame();
+}
 
-const rarityColors = {
-    common: '#aaa',
-    rare: '#4488ff',
-    epic: '#cc44ff',
-    legendary: '#ffaa00'
-};
-const rarityLabel = {
-    common:'일반', rare:'레어', epic:'에픽', legendary:'전설'
-};
+async function initCam(){
+  try{
+    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
+    document.getElementById('video').srcObject=s;return true;
+  }catch(e){notify('카메라 오류: '+e.message);return false;}
+}
 
-// ──────────────────────────────────────────────
-//  상태
-// ──────────────────────────────────────────────
-let collected = JSON.parse(localStorage.getItem('shinbi_v5') || '[]');
-let isAppeared = false;
-let lastAlpha = 0;
-let currentTarget = null;
-let currentTab = 'g';
-let videoStream = null;
+async function startGame(){
+  document.getElementById('startScreen').style.display='none';
+  document.getElementById('gameOverScreen').style.display='none';
+  if(!await initCam())return;
+  sKills=0;sGold=0;sCombo=0;S.combo=0;S.fails=0||0;
+  timeLeft=maxTime;bossSpawned=false;gameRunning=true;
+  buffs={damage:1,goldx2:false,shield:false};
+  activeG=[];activeI=[];clearLayer();
+  updateHUD();updateWHUD();startTimers();
+}
 
-// ──────────────────────────────────────────────
-//  시작
-// ──────────────────────────────────────────────
-async function start() {
-    try {
-        const s = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-        });
-        document.getElementById('v').srcObject = s;
-        videoStream = s;
-        document.getElementById('ghost-detector').textContent = '👁 탐지중...';
-    } catch(e) {
-        document.getElementById('ghost-detector').textContent = '⚠ 카메라 없음';
-        // 카메라 없어도 게임 가능
+function startTimers(){
+  clearInterval(timerIv);clearInterval(spawnIv);clearInterval(itemIv);
+  timerIv=setInterval(()=>{
+    if(!gameRunning)return;
+    timeLeft=Math.max(0,timeLeft-.1);
+    const p=timeLeft/maxTime*100,tf=$('timerFill');
+    tf.style.width=p+'%';tf.style.background=timeLeft<20?'linear-gradient(90deg,#f00,#f80)':'linear-gradient(90deg,#0af,#08f)';
+    if(timeLeft<=0)endGame();
+    if(S.totalKills>=50&&!bossSpawned)spawnBoss();
+  },100);
+  spawnIv=setInterval(()=>{
+    if(!gameRunning||activeG.length>=6)return;
+    Math.random()<.03?spawnSpecial():mkGhost(GHOSTS[Math.floor(Math.random()*GHOSTS.length)]);
+  },2500);
+  itemIv=setInterval(()=>{if(gameRunning&&activeI.length<5)mkItem();},4500);
+}
+
+function endGame(){
+  gameRunning=false;clearInterval(timerIv);clearInterval(spawnIv);clearInterval(itemIv);
+  clearLayer();save();
+  $('goKill').textContent=sKills;$('goGold').textContent=sGold+'G';
+  $('goLv').textContent=S.level;$('goCombo').textContent=S.maxCombo;
+  $('gameOverScreen').style.display='flex';
+}
+
+function restartGame(){
+  $('gameOverScreen').style.display='none';
+  sKills=0;sGold=0;sCombo=0;S.combo=0;S.fails=0;
+  timeLeft=maxTime;bossSpawned=false;gameRunning=true;
+  buffs={damage:1,goldx2:false,shield:false};
+  activeG=[];activeI=[];clearLayer();updateHUD();updateWHUD();startTimers();
+}
+
+function goHome(){$('gameOverScreen').style.display='none';$('startScreen').style.display='flex';}
+
+function spawnBoss(){bossSpawned=true;showBossAlert();mkGhost(BOSS);}
+function spawnSpecial(){showSpecialEvt();mkGhost(SPECIAL);}
+
+function mkGhost(gd){
+  const uid='g'+(gid++),hp=gd.hp+S.level*4;
+  const obj={uid,data:gd,hp,maxHp:hp,x:5+Math.random()*76,y:8+Math.random()*62,el:null,hpF:null,emEl:null,timer:null};
+  const el=document.createElement('div');
+  el.className='ghost-sprite'+(gd.isBoss?' boss-sprite':'');
+  el.id=uid;el.style.left=obj.x+'%';el.style.top=obj.y+'%';
+  const inn=document.createElement('div');inn.className='ghost-inner';
+  const em=document.createElement('div');em.className='ghost-emoji';em.textContent=gd.emoji;
+  const nm=document.createElement('div');nm.className='ghost-name';nm.textContent=gd.name;
+  const bar=document.createElement('div');bar.className='ghost-hp-bar';
+  const fill=document.createElement('div');fill.className='ghost-hp-fill';
+  bar.appendChild(fill);inn.append(em,nm,bar);el.appendChild(inn);
+  $('touchLayer').appendChild(el);
+  obj.el=el;obj.hpF=fill;obj.emEl=em;
+  obj.timer=setTimeout(()=>ghostEsc(obj),gd.isBoss?60000:7000+Math.random()*6000);
+  activeG.push(obj);
+  el.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();atk(obj,e.touches[0]);},{passive:false});
+  el.addEventListener('mousedown',e=>{e.preventDefault();atk(obj,e);});
+}
+
+function mkItem(){
+  const d=ITEMS[Math.floor(Math.random()*ITEMS.length)],uid='i'+(gid++);
+  const obj={uid,data:d,x:5+Math.random()*82,y:18+Math.random()*62,el:null,timer:null};
+  const el=document.createElement('div');el.className='item-sprite';el.id=uid;
+  el.style.left=obj.x+'%';el.style.top=obj.y+'%';
+  const em=document.createElement('div');em.className='item-emoji';em.textContent=d.emoji;
+  el.appendChild(em);$('touchLayer').appendChild(el);obj.el=el;
+  obj.timer=setTimeout(()=>rmI(obj),7000);activeI.push(obj);
+  el.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();collectItem(obj);},{passive:false});
+  el.addEventListener('mousedown',e=>{e.preventDefault();collectItem(obj);});
+}
+
+function atk(ghost,ev){
+  if(!gameRunning)return;
+  const w=WEAPONS[S.equippedWeapon],lv=S.weaponLevels[S.equippedWeapon]||0;
+  const bonus=RECIPES.slice(0,lv).reduce((a,r)=>a+r.bonus,0);
+  const cmult=1+Math.min((S.combo||0)*.03,1.0);
+  const dmg=Math.floor((w.dmg+bonus)*buffs.damage*cmult);
+  ghost.hp-=dmg;
+  ghost.emEl.classList.remove('ghost-hit');void ghost.emEl.offsetWidth;ghost.emEl.classList.add('ghost-hit');
+  const cx=ev.clientX||ev.pageX,cy=ev.clientY||ev.pageY;
+  showDmg(cx,cy,dmg);particles(cx,cy);doCombo();
+  const p=Math.max(0,ghost.hp/ghost.maxHp*100);
+  ghost.hpF.style.width=p+'%';
+  if(p<30)ghost.hpF.style.background='linear-gradient(90deg,#f00,#f44)';
+  else if(p<60)ghost.hpF.style.background='linear-gradient(90deg,#f80,#ff0)';
+  if(ghost.hp<=0)killGhost(ghost);
+}
+
+function killGhost(ghost){
+  clearTimeout(ghost.timer);
+  const g=ghost.data,gamt=Math.floor(g.gold*(buffs.goldx2?2:1)*(1+Math.floor(S.level/5)*.1));
+  S.gold+=gamt;sGold+=gamt;S.exp+=g.exp;S.totalKills++;sKills++;
+  if(g.isBoss){S.bossKills++;timeLeft=Math.min(timeLeft+30,maxTime);notify('⏰ 보스 처치! +30초!');}
+  if(g.isSpecial)S.specialKills++;
+  if(Math.random()<.3){
+    const mk=Object.keys(S.materials)[Math.floor(Math.random()*6)];
+    S.materials[mk]++;notify('📦 '+MATS.find(m=>m.id===mk).name+' 획득!');
+  }
+  rmG(ghost);polaroid(g,gamt,g.exp);checkLvl();checkAch();updateHUD();save();
+}
+
+function ghostEsc(ghost){
+  if(!gameRunning||ghost.hp<=0)return;
+  if(buffs.shield){notify('🛡️ 방패 부적이 막았다!');rmG(ghost);return;}
+  if(!S.fails)S.fails=0;S.fails++;
+  notify('💨 '+ghost.data.name+' 도망! 실패 '+S.fails+'/3');
+  if(S.fails>=3){endGame();return;}
+  rmG(ghost);updateHUD();
+}
+
+function rmG(g){if(g.el&&g.el.parentNode)g.el.parentNode.removeChild(g.el);activeG=activeG.filter(x=>x.uid!==g.uid);}
+function rmI(i){if(i.el&&i.el.parentNode)i.el.parentNode.removeChild(i.el);activeI=activeI.filter(x=>x.uid!==i.uid);}
+function clearLayer(){$('touchLayer').innerHTML='';activeG=[];activeI=[];}
+
+function collectItem(item){
+  if(!gameRunning)return;
+  clearTimeout(item.timer);const d=item.data;S.totalItems++;
+  switch(d.effect){
+    case 'gold':S.gold+=d.value;sGold+=d.value;notify('💰 골드 +'+d.value+'!');break;
+    case 'exp':S.exp+=d.value;notify('✨ 경험치 +'+d.value+'!');checkLvl();break;
+    case 'damage':buffs.damage=d.value;setTimeout(()=>buffs.damage=1,(d.dur||8)*1000);notify('⚔️ 공격력 '+d.value+'배 '+d.dur+'초!');break;
+    case 'shield':buffs.shield=true;setTimeout(()=>buffs.shield=false,(d.dur||10)*1000);notify('🛡️ 방패 '+d.dur+'초!');break;
+    case 'time':timeLeft=Math.min(timeLeft+d.value,maxTime);notify('⏰ 시간 +'+d.value+'초!');break;
+    case 'bomb':activeG.forEach(g=>{g.hp-=d.value;if(g.hpF)g.hpF.style.width=Math.max(0,g.hp/g.maxHp*100)+'%';if(g.hp<=0)setTimeout(()=>killGhost(g),50);});notify('💣 전체 공격!');break;
+    case 'goldx2':buffs.goldx2=true;setTimeout(()=>buffs.goldx2=false,(d.dur||15)*1000);notify('🎰 골드 2배 '+d.dur+'초!');break;
+    case 'mat':S.materials[d.value]++;notify('📦 '+MATS.find(m=>m.id===d.value).name+' 획득!');break;
+    case 'combo':S.combo=(S.combo||0)+d.value;notify('🌀 콤보 +'+d.value+'!');break;
+    case 'aoe':activeG.forEach(g=>{g.hp-=d.value;if(g.hp<=0)setTimeout(()=>killGhost(g),50);});notify('💥 전체 공격!');break;
+    case 'revive':S.fails=Math.max(0,(S.fails||0)-1);notify('🌸 실패 1회 회복!');break;
+    case 'summon':if(activeG.length<6)mkGhost(GHOSTS[Math.floor(Math.random()*GHOSTS.length)]);notify('📣 귀신 소환!');break;
+  }
+  rmI(item);updateHUD();checkAch();save();
+}
+
+function doCombo(){
+  S.combo=(S.combo||0)+1;if(S.combo>S.maxCombo)S.maxCombo=S.combo;
+  if(comboTimer)clearTimeout(comboTimer);
+  comboTimer=setTimeout(()=>{S.combo=0;updateHUD();},4000);
+  if(S.combo>=3){
+    const cd=$('comboDisplay');
+    $('comboText').textContent=S.combo+' COMBO!';
+    $('comboSub').textContent='공격력 +'+Math.min(Math.floor(S.combo*3),90)+'%';
+    cd.style.opacity='1';setTimeout(()=>cd.style.opacity='0',1500);
+  }
+  updateHUD();
+}
+
+function expNeeded(lv){return lv*80+lv*lv*10;}
+function checkLvl(){
+  while(S.exp>=expNeeded(S.level)){
+    S.exp-=expNeeded(S.level);S.level++;
+    const t=TITLES.filter(x=>S.level>=x.lv).pop();if(t)S.title=t.t;
+    $('lvlTitle').textContent=S.title;
+    const el=$('lvlBanner');el.style.opacity='1';setTimeout(()=>el.style.opacity='0',2500);
+  }
+  updateHUD();
+}
+
+function checkAch(){
+  ACHS.forEach(a=>{
+    if(!S.achievements[a.id]&&a.cond(S)){
+      S.achievements[a.id]=true;S.achDone=Object.keys(S.achievements).length;
+      S.gold+=a.rg;S.exp+=a.re;
+      notify('🏆 업적: '+a.name+'! +'+a.rg+'G');checkLvl();
     }
+  });
+}
 
-    updateCollectionCount();
+function updateHUD(){
+  $('hKill').textContent=sKills;$('hFail').textContent=S.fails||0;$('hCombo').textContent=S.combo||0;
+  $('hLv').textContent=S.level;$('hTitle').textContent=S.title;$('hGold').textContent=S.gold;$('hExp').textContent=S.exp;
+}
 
-    // 위치 감지
-    if ('geolocation' in navigator) {
-        navigator.geolocation.watchPosition(() => {
-            if (!isAppeared && Math.random() > 0.65) triggerAppearance();
-        }, null, { enableHighAccuracy: true });
+function updateWHUD(){
+  const w=WEAPONS[S.equippedWeapon],lv=S.weaponLevels[S.equippedWeapon]||0;
+  const bonus=RECIPES.slice(0,lv).reduce((a,r)=>a+r.bonus,0);
+  $('weaponIcon').textContent=w.emoji;$('weaponName').textContent=w.name;
+  $('weaponDmg').textContent='공격력: '+(w.dmg+bonus)+' | 강화: +'+lv;
+}
+
+function showDmg(x,y,d){
+  const el=document.createElement('div');el.className='dmg-text';el.textContent='-'+d;
+  el.style.left=(x-18)+'px';el.style.top=(y-18)+'px';document.body.appendChild(el);
+  setTimeout(()=>el.remove(),700);
+}
+
+function particles(x,y){
+  const cols=['#ff0','#f80','#f0f','#0ff','#fff','#0f8'];
+  for(let i=0;i<7;i++){
+    const p=document.createElement('div');p.className='particle';
+    const a=Math.random()*Math.PI*2,d=20+Math.random()*50;
+    p.style.setProperty('--px',Math.cos(a)*d+'px');p.style.setProperty('--py',Math.sin(a)*d+'px');
+    p.style.background=cols[Math.floor(Math.random()*6)];
+    const sz=4+Math.random()*8;p.style.width=sz+'px';p.style.height=sz+'px';
+    p.style.left=(x+(Math.random()-.5)*20)+'px';p.style.top=(y+(Math.random()-.5)*20)+'px';
+    document.body.appendChild(p);setTimeout(()=>p.remove(),800);
+  }
+}
+
+function polaroid(g,gold,exp){
+  const fl=$('flashOverlay');fl.style.opacity='1';setTimeout(()=>fl.style.opacity='0',130);
+  $('polEmoji').textContent=g.emoji;$('polName').textContent=g.name;$('polReward').textContent='+'+gold+'G · +'+exp+'XP';
+  const po=$('polaroidOverlay');po.style.display='flex';setTimeout(()=>po.style.display='none',1900);
+}
+
+function showBossAlert(){const e=$('bossAlert');e.style.opacity='1';setTimeout(()=>e.style.opacity='0',3000);}
+function showSpecialEvt(){const e=$('specialEvt');e.style.display='block';setTimeout(()=>e.style.display='none',5000);}
+
+function openShop(){
+  const g=$('shopGrid');g.innerHTML='';
+  WEAPONS.forEach(w=>{
+    const owned=S.weapons.includes(w.id),eq=S.equippedWeapon===w.id;
+    const d=document.createElement('div');
+    d.className='shop-item'+(eq?' equipped':owned?' owned':'');
+    d.innerHTML=`<div class="shop-emoji">${w.emoji}</div><div class="shop-name">${w.name}</div><div class="shop-stat">공격력: ${w.dmg}</div><div class="shop-stat">${w.desc}</div><div class="shop-price">${owned?(eq?'✅ 장착됨':'🎒 장착'):'💰 '+w.price+'G'}</div>`;
+    d.onclick=()=>{
+      if(S.weapons.includes(w.id)){S.equippedWeapon=w.id;if(S.weaponLevels[w.id]==null)S.weaponLevels[w.id]=0;notify('⚔️ '+w.name+' 장착!');updateWHUD();openShop();}
+      else{if(S.gold<w.price){notify('💰 골드 부족!');return;}S.gold-=w.price;S.weapons.push(w.id);S.weaponLevels[w.id]=0;S.ownedWeapons=S.weapons.length;S.equippedWeapon=w.id;notify('🎉 '+w.name+' 구매!');updateHUD();updateWHUD();checkAch();save();openShop();}
+    };
+    g.appendChild(d);
+  });
+  $('shopModal').classList.add('active');
+}
+
+function openUpgrade(){
+  const c=$('upgradeContent');c.innerHTML='';
+  S.weapons.forEach(wid=>{
+    const w=WEAPONS[wid],lv=S.weaponLevels[wid]||0,maxLv=RECIPES.length;
+    const card=document.createElement('div');card.className='upgrade-card';card.style.margin='6px 14px';
+    if(lv>=maxLv){card.innerHTML=`<h3>${w.emoji} ${w.name} <span style="color:#ff0">MAX ✨</span></h3><div style="color:#0f0;font-size:11px">최고 강화 달성!</div>`;
+    }else{
+      const rec=RECIPES[lv];let mh='',canUp=true;
+      Object.entries(rec.mats).forEach(([mid,need])=>{
+        const have=S.materials[mid]||0,mat=MATS.find(m=>m.id===mid),ok=have>=need;if(!ok)canUp=false;
+        mh+=`<div class="mat-row"><span>${mat.emoji} ${mat.name}</span><span class="${ok?'mat-have':'mat-need'}">${have}/${need}</span></div>`;
+      });
+      card.innerHTML=`<h3>${w.emoji} ${w.name} <span style="color:#8af">Lv.${lv}→${lv+1}</span></h3><div style="color:#fa0;font-size:11px;margin-bottom:6px">공격력 +${rec.bonus}</div>${mh}<button class="btn sm ${canUp?'green':'red'}" style="margin-top:9px;width:100%" onclick="doUp(${wid})">⚒️ ${canUp?'강화하기':'재료 부족'}</button>`;
     }
-
-    // 방향 감지
-    if (window.DeviceOrientationEvent) {
-        window.addEventListener('deviceorientation', e => {
-            if (!e.alpha) return;
-            let diff = Math.abs(e.alpha - lastAlpha);
-            if (diff > 30 && !isAppeared) {
-                if (Math.random() > 0.92) triggerAppearance();
-                lastAlpha = e.alpha;
-            }
-        });
-    }
-
-    // 자동 레이더 올라가는 효과
-    radarLoop();
+    c.appendChild(card);
+  });
+  $('upgradeModal').classList.add('active');
 }
 
-let radarValue = 0;
-let radarDir = 1;
-function radarLoop() {
-    radarValue += radarDir * (Math.random() * 2);
-    if (radarValue >= 100) { radarValue = 100; radarDir = -1; }
-    if (radarValue <= 0) { radarValue = 0; radarDir = 1; }
-    document.getElementById('radar-fill').style.width = radarValue + '%';
-    
-    // 레이더 가득 차면 귀신 등장
-    if (radarValue >= 98 && !isAppeared) {
-        triggerAppearance();
-    }
-    
-    // 탐지 텍스트 업데이트
-    if (radarValue < 30) document.getElementById('ghost-detector').textContent = '👁 탐지중...';
-    else if (radarValue < 60) document.getElementById('ghost-detector').textContent = '⚡ 반응 감지!';
-    else if (radarValue < 85) document.getElementById('ghost-detector').textContent = '⚠️ 접근 중!';
-    else document.getElementById('ghost-detector').textContent = '🚨 출현 임박!';
-
-    setTimeout(radarLoop, 80);
+function doUp(wid){
+  const lv=S.weaponLevels[wid]||0;if(lv>=RECIPES.length){notify('이미 최고 레벨!');return;}
+  const rec=RECIPES[lv];
+  for(const[mid,need]of Object.entries(rec.mats)){if((S.materials[mid]||0)<need){notify('재료 부족!');return;}}
+  for(const[mid,need]of Object.entries(rec.mats))S.materials[mid]-=need;
+  S.weaponLevels[wid]=lv+1;if(S.weaponLevels[wid]>S.maxWLv)S.maxWLv=S.weaponLevels[wid];
+  notify('⚒️ '+WEAPONS[wid].name+' 강화! Lv.'+(lv+1));updateWHUD();checkAch();save();openUpgrade();
 }
 
-// ──────────────────────────────────────────────
-//  귀신 등장
-// ──────────────────────────────────────────────
-function triggerAppearance() {
-    isAppeared = true;
-    radarValue = 0;
-
-    const isGhost = Math.random() > 0.4;
-    const pool = isGhost ? ghosts : items;
-    const res = pool[Math.floor(Math.random() * pool.length)];
-    currentTarget = res;
-
-    // 위험 플래시
-    const df = document.getElementById('danger-flash');
-    df.classList.add('active');
-    setTimeout(() => df.classList.remove('active'), 1600);
-
-    // 귀신 이미지 (이모지 캔버스로 그리기)
-    const idx = (isGhost ? ghosts : items).indexOf(res);
-    const emoji = isGhost ? ghostEmojis[idx % ghostEmojis.length] : itemEmojis[idx % itemEmojis.length];
-    
-    const wrap = document.getElementById('target-wrap');
-    const ghostImg = document.getElementById('ghost-img');
-    
-    // 이모지를 캔버스로 렌더
-    ghostImg.src = emojiToDataURL(emoji, isGhost ? '#ff1a1a' : '#ffd700', 180);
-    document.getElementById('ghost-name-tag').textContent = res.name;
-    
-    if (isGhost) {
-        ghostImg.style.filter = 'drop-shadow(0 0 20px #ff1a1a) drop-shadow(0 0 40px rgba(255,0,0,0.5))';
-    } else {
-        ghostImg.style.filter = 'drop-shadow(0 0 20px #ffd700) drop-shadow(0 0 40px rgba(255,215,0,0.5))';
-    }
-
-    wrap.style.display = 'flex';
-    wrap.classList.remove('show');
-    void wrap.offsetWidth; // reflow
-    wrap.classList.add('show');
-
-    setMsg(`⚠️ [${res.name}] 출현!`, '#ff4444');
-
-    // 진동
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
+function openInventory(){
+  const g=$('invGrid');g.innerHTML='';
+  MATS.forEach(m=>{
+    const d=document.createElement('div');d.className='inv-mat';
+    d.innerHTML=`<div class="me">${m.emoji}</div><div class="mn">${m.name}</div><div class="mc">${S.materials[m.id]||0}</div>`;
+    g.appendChild(d);
+  });
+  $('invModal').classList.add('active');
 }
 
-function emojiToDataURL(emoji, glowColor, size) {
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    
-    // 배경 원 (반투명)
-    ctx.beginPath();
-    ctx.arc(size/2, size/2, size/2 - 4, 0, Math.PI*2);
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.fill();
-    
-    // 테두리
-    ctx.strokeStyle = glowColor;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    
-    // 이모지
-    ctx.font = `${size * 0.55}px serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(emoji, size/2, size/2);
-    
-    // 노이즈 그레인 효과 (무서운 느낌)
-    for (let i = 0; i < 200; i++) {
-        const x = Math.random() * size;
-        const y = Math.random() * size;
-        const a = Math.random() * 0.15;
-        ctx.fillStyle = `rgba(255,0,0,${a})`;
-        ctx.fillRect(x, y, 1, 1);
-    }
-    
-    return canvas.toDataURL();
+function openAch(){
+  const l=$('achList');l.innerHTML='';
+  ACHS.forEach(a=>{
+    const done=!!S.achievements[a.id];
+    const d=document.createElement('div');d.className='ach-item'+(done?' ach-done':'');
+    d.innerHTML=`<div class="ach-icon">${done?'✅':a.icon}</div><div class="ach-info"><h4>${a.name}</h4><p>${a.desc}</p><div class="ach-reward">보상: +${a.rg}G · +${a.re}XP${done?' ✓':''}</div></div>`;
+    l.appendChild(d);
+  });
+  $('achModal').classList.add('active');
 }
 
-// ──────────────────────────────────────────────
-//  귀신 잡기
-// ──────────────────────────────────────────────
-function catchGhost() {
-    if (!currentTarget || !isAppeared) return;
-    const res = currentTarget;
+function closeM(id){$(id).classList.remove('active');}
 
-    // 셔터 효과
-    const shutter = document.getElementById('shutter');
-    shutter.classList.add('flash');
-    setTimeout(() => shutter.classList.remove('flash'), 600);
-
-    // 진동 (카메라 셔터 느낌)
-    if (navigator.vibrate) navigator.vibrate([30, 10, 30]);
-
-    // 귀신 숨기기
-    document.getElementById('target-wrap').style.display = 'none';
-
-    // 수집 처리
-    if (!collected.includes(res.id)) {
-        collected.push(res.id);
-        localStorage.setItem('shinbi_v5', JSON.stringify(collected));
-    }
-    updateCollectionCount();
-
-    // 폴라로이드 화면 생성
-    setTimeout(() => showPolaroid(res), 300);
+function notify(msg){
+  const el=$('notif');el.textContent=msg;el.style.opacity='1';
+  clearTimeout(notifTimer);notifTimer=setTimeout(()=>el.style.opacity='0',2600);
 }
 
-function showPolaroid(res) {
-    const canvas = document.getElementById('polaroid-canvas');
-    const ctx = canvas.getContext('2d');
-    const W = 240, H = 240;
+function $(id){return document.getElementById(id);}
 
-    // 카메라 실사 느낌 배경 (어두운 실내)
-    const grad = ctx.createRadialGradient(W/2, H/2, 20, W/2, H/2, W/2);
-    grad.addColorStop(0, '#1a1a1a');
-    grad.addColorStop(1, '#050505');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
+const cv=$('canvas'),cx2=cv.getContext('2d');
+function resizeCv(){cv.width=innerWidth;cv.height=innerHeight;}
+resizeCv();addEventListener('resize',resizeCv);
+(function vig(){
+  cx2.clearRect(0,0,cv.width,cv.height);
+  const g=cx2.createRadialGradient(cv.width/2,cv.height/2,cv.height*.2,cv.width/2,cv.height/2,cv.height*.85);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,40,.3)');
+  cx2.fillStyle=g;cx2.fillRect(0,0,cv.width,cv.height);
+  requestAnimationFrame(vig);
+})();
 
-    // 노이즈 그레인
-    for (let i = 0; i < 3000; i++) {
-        const x = Math.random() * W;
-        const y = Math.random() * H;
-        const v = Math.random() * 60;
-        ctx.fillStyle = `rgba(${v},${v},${v},0.4)`;
-        ctx.fillRect(x, y, 1, 1);
-    }
-
-    // 비네팅
-    const vig = ctx.createRadialGradient(W/2, H/2, W*0.25, W/2, H/2, W*0.7);
-    vig.addColorStop(0, 'transparent');
-    vig.addColorStop(1, 'rgba(0,0,0,0.75)');
-    ctx.fillStyle = vig;
-    ctx.fillRect(0, 0, W, H);
-
-    // 귀신 이모지 크게
-    const idx = ghosts.findIndex(g => g.id === res.id);
-    const isGhost = res.type === 'ghost';
-    const emoji = isGhost ? ghostEmojis[idx >= 0 ? idx : 0] : itemEmojis[items.findIndex(i => i.id === res.id) || 0];
-    
-    ctx.font = '100px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    // 글로우
-    ctx.shadowColor = isGhost ? '#ff1a1a' : '#ffd700';
-    ctx.shadowBlur = 30;
-    ctx.fillText(emoji, W/2, H/2 - 10);
-    ctx.shadowBlur = 0;
-
-    // 날짜
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
-    ctx.font = '11px monospace';
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.textAlign = 'center';
-    ctx.fillText(dateStr, W/2, H - 18);
-
-    // 좌측 하단 희귀도
-    if (res.rarity) {
-        ctx.font = 'bold 10px monospace';
-        ctx.fillStyle = rarityColors[res.rarity] || '#fff';
-        ctx.textAlign = 'left';
-        ctx.fillText(`★ ${rarityLabel[res.rarity] || ''}`, 12, H - 18);
-    }
-
-    document.getElementById('polaroid-name').textContent = res.name;
-    document.getElementById('polaroid-time').textContent = `${dateStr} 포획 완료`;
-
-    const cs = document.getElementById('capture-screen');
-    cs.style.display = 'flex';
-
-    confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: ['#ff1a1a','#ff6600','#ffd700','#fff'] });
-}
-
-function closeCaptureScreen() {
-    document.getElementById('capture-screen').style.display = 'none';
-    setMsg('✅ 도감에 저장됨!', '#00ff88');
-    setTimeout(() => {
-        isAppeared = false;
-        setMsg('📡 주변을 탐색하세요!', '#fff');
-    }, 2500);
-}
-
-// ──────────────────────────────────────────────
-//  도감
-// ──────────────────────────────────────────────
-function showBook() {
-    document.getElementById('book-screen').style.display = 'block';
-    renderGrid();
-}
-function closeBook() {
-    document.getElementById('book-screen').style.display = 'none';
-}
-function switchTab(t) {
-    currentTab = t;
-    document.getElementById('tab-g').className = t==='g' ? 'tab active' : 'tab';
-    document.getElementById('tab-i').className = t==='i' ? 'tab active' : 'tab';
-    renderGrid();
-}
-
-function renderGrid() {
-    const data = currentTab === 'g' ? ghosts : items;
-    const emojiList = currentTab === 'g' ? ghostEmojis : itemEmojis;
-    const total = data.length;
-    const got = data.filter(d => collected.includes(d.id)).length;
-    
-    document.getElementById('prog-fill').style.width = (got/total*100) + '%';
-
-    const grid = document.getElementById('grid-content');
-    grid.innerHTML = data.map((d, idx) => {
-        const has = collected.includes(d.id);
-        const emoji = emojiList[idx % emojiList.length];
-        const rColor = d.rarity ? rarityColors[d.rarity] : '#666';
-        
-        if (has) {
-            return `
-            <div class="item-slot collected" style="border-color:${rColor}33; background: ${rColor}11">
-                <div class="polaroid-frame" style="border: 2px solid ${rColor}; transform:rotate(${(Math.random()-0.5)*4}deg)">
-                    <span style="font-size:40px; display:flex; align-items:center; justify-content:center; height:100%">${emoji}</span>
-                </div>
-                <div class="slot-name" style="color:${rColor}">${d.name}</div>
-                ${d.rarity ? `<div style="font-size:8px;color:${rColor};margin-top:2px">★ ${rarityLabel[d.rarity]}</div>` : ''}
-            </div>`;
-        } else {
-            return `
-            <div class="item-slot locked">
-                <span class="locked-icon">🔒</span>
-                <div class="slot-name">???</div>
-            </div>`;
-        }
-    }).join('');
-}
-
-function updateCollectionCount() {
-    const total = ghosts.length + items.length;
-    document.getElementById('collection-count').textContent = `📖 ${collected.length} / ${total}`;
-}
-
-// ──────────────────────────────────────────────
-//  유틸
-// ──────────────────────────────────────────────
-function setMsg(text, color = '#fff') {
-    const el = document.getElementById('msg-inner');
-    el.textContent = text;
-    el.style.color = color;
-    el.style.textShadow = `0 0 10px ${color}`;
-}
-
-function manualTrigger() {
-    if (isAppeared) return;
-    radarValue = 95;
-    setMsg('🔦 탐색 중...', '#0f0');
-    if (navigator.vibrate) navigator.vibrate(50);
-}
-
-// ──────────────────────────────────────────────
-//  초기화
-// ──────────────────────────────────────────────
-window.onload = start;
+document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+document.addEventListener('contextmenu',e=>e.preventDefault());
 </script>
 </body>
 </html>
